@@ -1,6 +1,8 @@
 package solver
 
-func (s *Sudoku) FindNakedSingle() bool {
+import "fmt"
+
+func (s *Sudoku) FindNakedSingle() (Step, bool) {
 	for row := range 9 {
 		for col := range 9 {
 			if s.Board[row][col] != 0 {
@@ -12,12 +14,21 @@ func (s *Sudoku) FindNakedSingle() bool {
 
 				s.Place(row, col, number)
 
-				return true
+				return Step{
+					Technique: "Naked Single",
+					Explanation: fmt.Sprintf(
+						"Cell R%dC%d has only one possible candidate: %d.",
+						row+1, col+1, number,
+					),
+					Row:    row,
+					Col:    col,
+					Number: number,
+				}, true
 			}
 		}
 	}
 
-	return false
+	return Step{}, false
 }
 
 func singleCandidate(mask uint16) int {

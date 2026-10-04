@@ -1,6 +1,8 @@
 package solver
 
-func (s *Sudoku) FindHiddenSingle() bool {
+import "fmt"
+
+func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 	// Rows
 	for row := range 9 {
 		for number := 1; number <= 9; number++ {
@@ -20,7 +22,19 @@ func (s *Sudoku) FindHiddenSingle() bool {
 
 			if count == 1 {
 				s.Place(row, foundCol, number)
-				return true
+				return Step{
+					Technique: "Hidden Single",
+					Explanation: fmt.Sprintf(
+						"In row %d, %d can only go in R%dC%d.",
+						row+1,
+						number,
+						row+1,
+						foundCol+1,
+					),
+					Row:    row,
+					Col:    foundCol,
+					Number: number,
+				}, true
 			}
 		}
 	}
@@ -44,7 +58,19 @@ func (s *Sudoku) FindHiddenSingle() bool {
 
 			if count == 1 {
 				s.Place(foundRow, col, number)
-				return true
+				return Step{
+					Technique: "Hidden Single",
+					Explanation: fmt.Sprintf(
+						"In column %d, %d can only go in R%dC%d.",
+						col+1,
+						number,
+						foundRow+1,
+						col+1,
+					),
+					Row:    foundRow,
+					Col:    col,
+					Number: number,
+				}, true
 			}
 		}
 	}
@@ -75,10 +101,22 @@ func (s *Sudoku) FindHiddenSingle() bool {
 
 			if count == 1 {
 				s.Place(foundRow, foundCol, number)
-				return true
+				return Step{
+					Technique: "Hidden Single",
+					Explanation: fmt.Sprintf(
+						"In box %d, %d can only go in R%dC%d.",
+						box,
+						number,
+						foundRow+1,
+						foundCol+1,
+					),
+					Row:    foundRow,
+					Col:    foundCol,
+					Number: number,
+				}, true
 			}
 		}
 	}
 
-	return false
+	return Step{}, false
 }

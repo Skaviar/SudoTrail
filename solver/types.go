@@ -20,6 +20,14 @@ type Sudoku struct {
 	Candidates [9][9]uint16
 }
 
+type Step struct {
+	Technique   string
+	Explanation string
+	Row         int
+	Col         int
+	Number      int
+}
+
 func (s *Sudoku) InitializeSudoku(p Puzzle) {
 	for row := range 9 {
 		for col := range 9 {

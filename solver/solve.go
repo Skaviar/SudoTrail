@@ -1,22 +1,39 @@
 package solver
 
-func (s *Sudoku) SolveStep() bool {
-	if s.FindFullHouse() {
-		return true
+import "fmt"
+
+func (s *Sudoku) SolveStep() (Step, bool) {
+	if step, ok := s.FindFullHouse(); ok {
+		return step, true
 	}
 
-	if s.FindHiddenSingle() {
-		return true
+	if step, ok := s.FindHiddenSingle(); ok {
+		return step, true
 	}
 
-	if s.FindNakedSingle() {
-		return true
+	if step, ok := s.FindNakedSingle(); ok {
+		return step, true
 	}
 
-	return false
+	return Step{}, false
 }
 
 func (s *Sudoku) Solve() {
-	for s.SolveStep() {
+	stepNumber := 1
+
+	for {
+		step, ok := s.SolveStep()
+
+		if !ok {
+			break
+		}
+
+		fmt.Printf("\n================ STEP %d ================\n", stepNumber)
+		fmt.Printf("Technique: %s\n", step.Technique)
+		fmt.Printf("Explanation: %s\n", step.Explanation)
+
+		s.Print()
+
+		stepNumber++
 	}
 }
