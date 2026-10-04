@@ -17,25 +17,18 @@ func FindNakedSingle(s *Sudoku) (Step, bool) {
 
 			number := singleCandidate(candidates)
 
-			details := []string{
+			details := explainCellCandidates(s, row, col)
+
+			details = append(
+				details,
 				fmt.Sprintf(
-					"R%dC%d has candidates: %v.",
-					row+1,
-					col+1,
-					candidateList(candidates),
-				),
-				"The row, column, and 3×3 box have eliminated all other numbers.",
-				fmt.Sprintf(
-					"Only %d remains as a valid candidate.",
+					"Only %d remains, so R%dC%d must be %d.",
 					number,
-				),
-				fmt.Sprintf(
-					"Therefore R%dC%d = %d.",
 					row+1,
 					col+1,
 					number,
 				),
-			}
+			)
 
 			s.Place(row, col, number)
 

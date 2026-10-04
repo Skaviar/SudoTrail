@@ -32,18 +32,22 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 
 			details := []string{
 				fmt.Sprintf(
-					"Row %d has only one empty cell: R%dC%d.",
-					row+1,
-					row+1,
-					emptyCol+1,
-				),
-				fmt.Sprintf(
-					"Numbers already present in Row %d: %v.",
+					"Row %d currently contains: %v.",
 					row+1,
 					present,
 				),
 				fmt.Sprintf(
-					"The only number missing from the row is %d.",
+					"R%dC%d is the only empty cell in Row %d.",
+					row+1,
+					emptyCol+1,
+					row+1,
+				),
+				fmt.Sprintf(
+					"A Sudoku row must contain every number from 1 through 9 exactly once.",
+				),
+				fmt.Sprintf(
+					"The only number missing from Row %d is %d.",
+					row+1,
 					number,
 				),
 				fmt.Sprintf(
@@ -79,6 +83,7 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 		for row := range 9 {
 			if s.Board[row][col] == 0 {
 				if emptyRow != -1 {
+					// More than one empty cell.
 					emptyRow = -2
 					break
 				}
@@ -98,18 +103,22 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 
 			details := []string{
 				fmt.Sprintf(
-					"Column %d has only one empty cell: R%dC%d.",
-					col+1,
-					emptyRow+1,
-					col+1,
-				),
-				fmt.Sprintf(
-					"Numbers already present in Column %d: %v.",
+					"Column %d currently contains: %v.",
 					col+1,
 					present,
 				),
 				fmt.Sprintf(
-					"The only number missing from the column is %d.",
+					"R%dC%d is the only empty cell in Column %d.",
+					emptyRow+1,
+					col+1,
+					col+1,
+				),
+				fmt.Sprintf(
+					"A Sudoku column must contain every number from 1 through 9 exactly once.",
+				),
+				fmt.Sprintf(
+					"The only number missing from Column %d is %d.",
+					col+1,
 					number,
 				),
 				fmt.Sprintf(
@@ -148,6 +157,7 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 				for col := boxCol; col < boxCol+3; col++ {
 					if s.Board[row][col] == 0 {
 						if emptyRow != -1 {
+							// More than one empty cell.
 							emptyRow = -2
 							break
 						}
@@ -178,18 +188,20 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 
 				details := []string{
 					fmt.Sprintf(
-						"Box %d has only one empty cell: R%dC%d.",
-						boxNumber,
-						emptyRow+1,
-						emptyCol+1,
-					),
-					fmt.Sprintf(
-						"Numbers already present in Box %d: %v.",
+						"Box %d currently contains: %v.",
 						boxNumber,
 						present,
 					),
 					fmt.Sprintf(
-						"The only number missing from the box is %d.",
+						"R%dC%d is the only empty cell in Box %d.",
+						emptyRow+1,
+						emptyCol+1,
+						boxNumber,
+					),
+					"A Sudoku box must contain every number from 1 through 9 exactly once.",
+					fmt.Sprintf(
+						"The only number missing from Box %d is %d.",
+						boxNumber,
 						number,
 					),
 					fmt.Sprintf(
@@ -219,6 +231,10 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 
 	return Step{}, false
 }
+
+// --------------------------------------------------
+// Missing number helpers
+// --------------------------------------------------
 
 func singleMissingNumberRow(s *Sudoku, row int) int {
 	var seen [10]bool
@@ -260,7 +276,11 @@ func singleMissingNumberColumn(s *Sudoku, col int) int {
 	return 0
 }
 
-func singleMissingNumberBox(s *Sudoku, boxRow, boxCol int) int {
+func singleMissingNumberBox(
+	s *Sudoku,
+	boxRow int,
+	boxCol int,
+) int {
 	var seen [10]bool
 
 	for row := boxRow; row < boxRow+3; row++ {
@@ -281,6 +301,10 @@ func singleMissingNumberBox(s *Sudoku, boxRow, boxCol int) int {
 
 	return 0
 }
+
+// --------------------------------------------------
+// Present number helpers
+// --------------------------------------------------
 
 func presentNumbersRow(s *Sudoku, row int) []int {
 	var numbers []int
@@ -312,7 +336,11 @@ func presentNumbersColumn(s *Sudoku, col int) []int {
 	return numbers
 }
 
-func presentNumbersBox(s *Sudoku, boxRow, boxCol int) []int {
+func presentNumbersBox(
+	s *Sudoku,
+	boxRow int,
+	boxCol int,
+) []int {
 	var numbers []int
 
 	for number := 1; number <= 9; number++ {
