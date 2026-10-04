@@ -30,6 +30,10 @@ func main() {
 	fmt.Println(Puzzles[5].Puzzle)
 	sudoku.InitializeSudoku(Puzzles[5])
 	sudoku.Print()
+	sudoku.Solve()
+	fmt.Print("\n\n**************After solving**************\n\n")
+	sudoku.Print()
+
 }
 
 func appendPuzzle(puzzles *[]solver.Puzzle, dataLine string) {

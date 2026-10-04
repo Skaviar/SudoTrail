@@ -1,6 +1,11 @@
 package solver
 
-import "fmt"
+import (
+	"fmt"
+	"math/bits"
+)
+
+const AllCandidates uint16 = 0b1111111110 // bits 1-9
 
 type Puzzle struct {
 	Id         string
@@ -11,70 +16,139 @@ type Puzzle struct {
 }
 
 type Sudoku struct {
-	Rows             [9][9]int32
-	Columns          [9][9]int32
-	Boxes            [9][9]int32
-	RowsRemaining    [9][10]bool
-	ColumnsRemaining [9][10]bool
-	BoxesRemaining   [9][10]bool
+	Board      [9][9]int8
+	Candidates [9][9]uint16
 }
 
 func (s *Sudoku) InitializeSudoku(p Puzzle) {
-	for i := range 9 {
-		for j := range 9 {
-			index := i*9 + j
-
-			var value int32
+	for row := range 9 {
+		for col := range 9 {
+			index := row*9 + col
 
 			if p.Puzzle[index] == '.' {
-				value = 0
+				s.Board[row][col] = 0
 			} else {
-				value = int32(p.Puzzle[index] - '0')
+				s.Board[row][col] = int8(p.Puzzle[index] - '0')
 			}
-
-			s.Rows[i][j] = value
-			s.Columns[j][i] = value
-
-			box := (i/3)*3 + (j / 3)
-			boxIndex := (i%3)*3 + (j % 3)
-			s.Boxes[box][boxIndex] = value
 		}
 	}
 
-	// Initially, every number 1-9 is available.
-	for i := range 9 {
-		for num := 1; num <= 9; num++ {
-			s.RowsRemaining[i][num] = true
-			s.ColumnsRemaining[i][num] = true
-			s.BoxesRemaining[i][num] = true
-		}
-	}
+	s.initializeCandidates()
+}
 
-	// Remove numbers already present in the puzzle.
-	for i := range 9 {
-		for j := range 9 {
-			value := s.Rows[i][j]
-
-			if value == 0 {
+func (s *Sudoku) initializeCandidates() {
+	for row := range 9 {
+		for col := range 9 {
+			if s.Board[row][col] != 0 {
+				s.Candidates[row][col] = 0
 				continue
 			}
 
-			s.RowsRemaining[i][value] = false
-			s.ColumnsRemaining[j][value] = false
-
-			box := (i/3)*3 + (j / 3)
-			s.BoxesRemaining[box][value] = false
+			s.Candidates[row][col] = s.calculateCandidates(row, col)
 		}
 	}
 }
+
+func (s *Sudoku) calculateCandidates(row, col int) uint16 {
+	var candidates uint16 = AllCandidates
+
+	// Remove numbers from row
+	for c := range 9 {
+		value := s.Board[row][c]
+
+		if value != 0 {
+			candidates = removeCandidate(candidates, int(value))
+		}
+	}
+
+	// Remove numbers from column
+	for r := range 9 {
+		value := s.Board[r][col]
+
+		if value != 0 {
+			candidates = removeCandidate(candidates, int(value))
+		}
+	}
+
+	// Remove numbers from box
+	boxRow := (row / 3) * 3
+	boxCol := (col / 3) * 3
+
+	for r := boxRow; r < boxRow+3; r++ {
+		for c := boxCol; c < boxCol+3; c++ {
+			value := s.Board[r][c]
+
+			if value != 0 {
+				candidates = removeCandidate(candidates, int(value))
+			}
+		}
+	}
+
+	return candidates
+}
+
+func hasCandidate(mask uint16, number int) bool {
+	return mask&(1<<number) != 0
+}
+
+func removeCandidate(mask uint16, number int) uint16 {
+	return mask &^ (1 << number)
+}
+
+func candidateCount(mask uint16) int {
+	return bits.OnesCount16(mask)
+}
+
+func (s *Sudoku) Place(row, col, number int) {
+	if number < 1 || number > 9 {
+		return
+	}
+
+	s.Board[row][col] = int8(number)
+	s.Candidates[row][col] = 0
+
+	s.updateCandidates(row, col, number)
+}
+
+func (s *Sudoku) updateCandidates(row, col, number int) {
+	// Same row
+	for c := range 9 {
+		if c != col {
+			s.Candidates[row][c] =
+				removeCandidate(s.Candidates[row][c], number)
+		}
+	}
+
+	// Same column
+	for r := range 9 {
+		if r != row {
+			s.Candidates[r][col] =
+				removeCandidate(s.Candidates[r][col], number)
+		}
+	}
+
+	// Same box
+	boxRow := (row / 3) * 3
+	boxCol := (col / 3) * 3
+
+	for r := boxRow; r < boxRow+3; r++ {
+		for c := boxCol; c < boxCol+3; c++ {
+			if r != row || c != col {
+				s.Candidates[r][c] =
+					removeCandidate(s.Candidates[r][c], number)
+			}
+		}
+	}
+}
+
 func (s *Sudoku) Print() {
 	fmt.Println("+-------+-------+-------+")
 
-	for i := range 9 {
+	for row := range 9 {
 		fmt.Print("| ")
 
-		for j := range 9 {
-			value := s.Rows[i][j]
+		for col := range 9 {
+			value := s.Board[row][col]
 
 			if value == 0 {
 				fmt.Print(". ")
@@ -82,17 +156,50 @@ func (s *Sudoku) Print() {
 				fmt.Printf("%d ", value)
 			}
 
-			if j == 2 || j == 5 {
+			if col == 2 || col == 5 {
 				fmt.Print("| ")
 			}
 		}
 
 		fmt.Println("|")
 
-		if i == 2 || i == 5 {
+		if row == 2 || row == 5 {
 			fmt.Println("+-------+-------+-------+")
 		}
 	}
 
 	fmt.Println("+-------+-------+-------+")
+}
+
+// --------------------------------------------------
+// Debugging candidates
+// --------------------------------------------------
+
+func (s *Sudoku) PrintCandidates() {
+	for row := range 9 {
+		for col := range 9 {
+			if s.Board[row][col] != 0 {
+				continue
+			}
+
+			fmt.Printf(
+				"(%d,%d): %v\n",
+				row,
+				col,
+				candidateList(s.Candidates[row][col]),
+			)
+		}
+	}
+}
+
+func candidateList(mask uint16) []int {
+	var result []int
+
+	for number := 1; number <= 9; number++ {
+		if hasCandidate(mask, number) {
+			result = append(result, number)
+		}
+	}
+
+	return result
 }
