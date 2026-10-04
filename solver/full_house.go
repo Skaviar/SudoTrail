@@ -1,22 +1,32 @@
 package solver
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func (s *Sudoku) FindFullHouse() (Step, bool) {
-	// Rows
+func FindFullHouse(s *Sudoku) (Step, bool) {
+	// Check rows.
 	for row := range 9 {
 		emptyCol := -1
-		emptyCount := 0
 
 		for col := range 9 {
 			if s.Board[row][col] == 0 {
+				if emptyCol != -1 {
+					// More than one empty cell.
+					emptyCol = -2
+					break
+				}
+
 				emptyCol = col
-				emptyCount++
 			}
 		}
 
-		if emptyCount == 1 {
-			number := singleMissingNumberRow(s.Board[row])
+		if emptyCol >= 0 {
+			number := singleMissingNumberRow(*s, row)
+
+			if number == 0 {
+				continue
+			}
 
 			s.Place(row, emptyCol, number)
 
@@ -36,20 +46,28 @@ func (s *Sudoku) FindFullHouse() (Step, bool) {
 		}
 	}
 
-	// Columns
+	// Check columns.
 	for col := range 9 {
 		emptyRow := -1
-		emptyCount := 0
 
 		for row := range 9 {
 			if s.Board[row][col] == 0 {
+				if emptyRow != -1 {
+					// More than one empty cell.
+					emptyRow = -2
+					break
+				}
+
 				emptyRow = row
-				emptyCount++
 			}
 		}
 
-		if emptyCount == 1 {
-			number := s.singleMissingNumberColumn(col)
+		if emptyRow >= 0 {
+			number := singleMissingNumberColumn(s, col)
+
+			if number == 0 {
+				continue
+			}
 
 			s.Place(emptyRow, col, number)
 
@@ -69,53 +87,72 @@ func (s *Sudoku) FindFullHouse() (Step, bool) {
 		}
 	}
 
-	// Boxes
-	for box := range 9 {
-		emptyRow := -1
-		emptyCol := -1
-		emptyCount := 0
+	// Check boxes.
+	for boxRow := 0; boxRow < 9; boxRow += 3 {
+		for boxCol := 0; boxCol < 9; boxCol += 3 {
+			emptyRow := -1
+			emptyCol := -1
 
-		boxRow := (box / 3) * 3
-		boxCol := (box % 3) * 3
+			for row := boxRow; row < boxRow+3; row++ {
+				for col := boxCol; col < boxCol+3; col++ {
+					if s.Board[row][col] == 0 {
+						if emptyRow != -1 {
+							// More than one empty cell.
+							emptyRow = -2
+							break
+						}
 
-		for row := boxRow; row < boxRow+3; row++ {
-			for col := boxCol; col < boxCol+3; col++ {
-				if s.Board[row][col] == 0 {
-					emptyRow = row
-					emptyCol = col
-					emptyCount++
+						emptyRow = row
+						emptyCol = col
+					}
+				}
+
+				if emptyRow == -2 {
+					break
 				}
 			}
-		}
 
-		if emptyCount == 1 {
-			number := s.singleMissingNumberBox(box)
+			if emptyRow >= 0 {
+				number := singleMissingNumberBox(
+					s,
+					boxRow,
+					boxCol,
+				)
 
-			s.Place(emptyRow, emptyCol, number)
+				if number == 0 {
+					continue
+				}
 
-			return Step{
-				Technique: "Full House",
-				Explanation: fmt.Sprintf(
-					"Box %d has only one empty cell, R%dC%d, so the missing number is %d.",
-					box,
-					emptyRow+1,
-					emptyCol+1,
-					number,
-				),
-				Row:    emptyRow,
-				Col:    emptyCol,
-				Number: number,
-			}, true
+				boxNumber := (boxRow/3)*3 + (boxCol / 3) + 1
+
+				s.Place(emptyRow, emptyCol, number)
+
+				return Step{
+					Technique: "Full House",
+					Explanation: fmt.Sprintf(
+						"Box %d has only one empty cell, R%dC%d, so the missing number is %d.",
+						boxNumber,
+						emptyRow+1,
+						emptyCol+1,
+						number,
+					),
+					Row:    emptyRow,
+					Col:    emptyCol,
+					Number: number,
+				}, true
+			}
 		}
 	}
 
 	return Step{}, false
 }
 
-func singleMissingNumberRow(row [9]int8) int {
+func singleMissingNumberRow(s Sudoku, row int) int {
 	var seen [10]bool
 
-	for _, value := range row {
+	for col := range 9 {
+		value := s.Board[row][col]
+
 		if value != 0 {
 			seen[value] = true
 		}
@@ -130,7 +167,7 @@ func singleMissingNumberRow(row [9]int8) int {
 	return 0
 }
 
-func (s *Sudoku) singleMissingNumberColumn(col int) int {
+func singleMissingNumberColumn(s *Sudoku, col int) int {
 	var seen [10]bool
 
 	for row := range 9 {
@@ -150,11 +187,12 @@ func (s *Sudoku) singleMissingNumberColumn(col int) int {
 	return 0
 }
 
-func (s *Sudoku) singleMissingNumberBox(box int) int {
+func singleMissingNumberBox(
+	s *Sudoku,
+	boxRow int,
+	boxCol int,
+) int {
 	var seen [10]bool
-
-	boxRow := (box / 3) * 3
-	boxCol := (box % 3) * 3
 
 	for row := boxRow; row < boxRow+3; row++ {
 		for col := boxCol; col < boxCol+3; col++ {

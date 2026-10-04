@@ -1,46 +1,43 @@
 package solver
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func (s *Sudoku) FindNakedSingle() (Step, bool) {
+func FindNakedSingle(s *Sudoku) (Step, bool) {
 	for row := range 9 {
 		for col := range 9 {
+			// Skip already-filled cells.
 			if s.Board[row][col] != 0 {
 				continue
 			}
 
-			if candidateCount(s.Candidates[row][col]) == 1 {
-				number := singleCandidate(s.Candidates[row][col])
+			candidates := s.Candidates[row][col]
 
-				s.Place(row, col, number)
-
-				return Step{
-					Technique: "Naked Single",
-					Explanation: fmt.Sprintf(
-						"Cell R%dC%d has only one possible candidate: %d.",
-						row+1, col+1, number,
-					),
-					Row:    row,
-					Col:    col,
-					Number: number,
-				}, true
+			// Naked Single means exactly one candidate.
+			if CandidateCount(candidates) != 1 {
+				continue
 			}
+
+			number := SingleCandidate(candidates)
+
+			s.Place(row, col, number)
+
+			return Step{
+				Technique: "Naked Single",
+				Explanation: fmt.Sprintf(
+					"Cell R%dC%d has only one possible candidate: %d.",
+					row+1,
+					col+1,
+					number,
+				),
+				Row:              row,
+				Col:              col,
+				Number:           number,
+				BeforeCandidates: candidates,
+			}, true
 		}
 	}
 
 	return Step{}, false
-}
-
-func singleCandidate(mask uint16) int {
-	if candidateCount(mask) != 1 {
-		return 0
-	}
-
-	for number := 1; number <= 9; number++ {
-		if hasCandidate(mask, number) {
-			return number
-		}
-	}
-
-	return 0
 }

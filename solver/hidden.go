@@ -1,9 +1,11 @@
 package solver
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func (s *Sudoku) FindHiddenSingle() (Step, bool) {
-	// Rows
+func FindHiddenSingle(s *Sudoku) (Step, bool) {
+	// Check rows.
 	for row := range 9 {
 		for number := 1; number <= 9; number++ {
 			count := 0
@@ -14,7 +16,10 @@ func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 					continue
 				}
 
-				if hasCandidate(s.Candidates[row][col], number) {
+				if HasCandidate(
+					s.Candidates[row][col],
+					number,
+				) {
 					count++
 					foundCol = col
 				}
@@ -22,6 +27,7 @@ func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 
 			if count == 1 {
 				s.Place(row, foundCol, number)
+
 				return Step{
 					Technique: "Hidden Single",
 					Explanation: fmt.Sprintf(
@@ -39,7 +45,7 @@ func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 		}
 	}
 
-	// Columns
+	// Check columns.
 	for col := range 9 {
 		for number := 1; number <= 9; number++ {
 			count := 0
@@ -50,7 +56,10 @@ func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 					continue
 				}
 
-				if hasCandidate(s.Candidates[row][col], number) {
+				if HasCandidate(
+					s.Candidates[row][col],
+					number,
+				) {
 					count++
 					foundRow = row
 				}
@@ -58,6 +67,7 @@ func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 
 			if count == 1 {
 				s.Place(foundRow, col, number)
+
 				return Step{
 					Technique: "Hidden Single",
 					Explanation: fmt.Sprintf(
@@ -75,45 +85,50 @@ func (s *Sudoku) FindHiddenSingle() (Step, bool) {
 		}
 	}
 
-	// Boxes
-	for box := range 9 {
-		boxRow := (box / 3) * 3
-		boxCol := (box % 3) * 3
+	// Check boxes.
+	for boxRow := 0; boxRow < 9; boxRow += 3 {
+		for boxCol := 0; boxCol < 9; boxCol += 3 {
+			boxNumber := (boxRow/3)*3 + (boxCol / 3) + 1
 
-		for number := 1; number <= 9; number++ {
-			count := 0
-			foundRow := -1
-			foundCol := -1
+			for number := 1; number <= 9; number++ {
+				count := 0
+				foundRow := -1
+				foundCol := -1
 
-			for row := boxRow; row < boxRow+3; row++ {
-				for col := boxCol; col < boxCol+3; col++ {
-					if s.Board[row][col] != 0 {
-						continue
-					}
+				for row := boxRow; row < boxRow+3; row++ {
+					for col := boxCol; col < boxCol+3; col++ {
+						if s.Board[row][col] != 0 {
+							continue
+						}
 
-					if hasCandidate(s.Candidates[row][col], number) {
-						count++
-						foundRow = row
-						foundCol = col
+						if HasCandidate(
+							s.Candidates[row][col],
+							number,
+						) {
+							count++
+							foundRow = row
+							foundCol = col
+						}
 					}
 				}
-			}
 
-			if count == 1 {
-				s.Place(foundRow, foundCol, number)
-				return Step{
-					Technique: "Hidden Single",
-					Explanation: fmt.Sprintf(
-						"In box %d, %d can only go in R%dC%d.",
-						box,
-						number,
-						foundRow+1,
-						foundCol+1,
-					),
-					Row:    foundRow,
-					Col:    foundCol,
-					Number: number,
-				}, true
+				if count == 1 {
+					s.Place(foundRow, foundCol, number)
+
+					return Step{
+						Technique: "Hidden Single",
+						Explanation: fmt.Sprintf(
+							"In box %d, %d can only go in R%dC%d.",
+							boxNumber,
+							number,
+							foundRow+1,
+							foundCol+1,
+						),
+						Row:    foundRow,
+						Col:    foundCol,
+						Number: number,
+					}, true
+				}
 			}
 		}
 	}
