@@ -24,8 +24,7 @@ func (s *Sudoku) initializeCandidates() {
 				continue
 			}
 
-			s.Candidates[row][col] =
-				s.calculateCandidates(row, col)
+			s.Candidates[row][col] = s.calculateCandidates(row, col)
 		}
 	}
 }
@@ -38,10 +37,7 @@ func (s *Sudoku) calculateCandidates(row, col int) uint16 {
 		value := s.Board[row][c]
 
 		if value != 0 {
-			candidates = RemoveCandidate(
-				candidates,
-				int(value),
-			)
+			candidates = removeCandidate(candidates, int(value))
 		}
 	}
 
@@ -50,10 +46,7 @@ func (s *Sudoku) calculateCandidates(row, col int) uint16 {
 		value := s.Board[r][col]
 
 		if value != 0 {
-			candidates = RemoveCandidate(
-				candidates,
-				int(value),
-			)
+			candidates = removeCandidate(candidates, int(value))
 		}
 	}
 
@@ -66,10 +59,7 @@ func (s *Sudoku) calculateCandidates(row, col int) uint16 {
 			value := s.Board[r][c]
 
 			if value != 0 {
-				candidates = RemoveCandidate(
-					candidates,
-					int(value),
-				)
+				candidates = removeCandidate(candidates, int(value))
 			}
 		}
 	}
@@ -93,10 +83,7 @@ func (s *Sudoku) updateCandidates(row, col, number int) {
 	for c := range 9 {
 		if c != col {
 			s.Candidates[row][c] =
-				RemoveCandidate(
-					s.Candidates[row][c],
-					number,
-				)
+				removeCandidate(s.Candidates[row][c], number)
 		}
 	}
 
@@ -104,10 +91,7 @@ func (s *Sudoku) updateCandidates(row, col, number int) {
 	for r := range 9 {
 		if r != row {
 			s.Candidates[r][col] =
-				RemoveCandidate(
-					s.Candidates[r][col],
-					number,
-				)
+				removeCandidate(s.Candidates[r][col], number)
 		}
 	}
 
@@ -119,10 +103,7 @@ func (s *Sudoku) updateCandidates(row, col, number int) {
 		for c := boxCol; c < boxCol+3; c++ {
 			if r != row || c != col {
 				s.Candidates[r][c] =
-					RemoveCandidate(
-						s.Candidates[r][c],
-						number,
-					)
+					removeCandidate(s.Candidates[r][c], number)
 			}
 		}
 	}

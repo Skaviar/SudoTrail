@@ -7,28 +7,36 @@ import (
 )
 
 const (
-	Reset  = "\033[0m"
-	Bold   = "\033[1m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
+	Reset = "\033[0m"
+	Bold  = "\033[1m"
+
+	// Explicitly set normal text colors.
+	// Do NOT rely on Reset because your terminal itself is green.
+	Normal = "\033[37m"
+
 	Cyan   = "\033[36m"
-	Red    = "\033[31m"
+	Yellow = "\033[33m"
 	Blue   = "\033[34m"
+	Red    = "\033[31m"
+
+	// Newly solved cell.
+	LightGreen = "\033[92m"
 )
 
 func PrintStep(step Step, stepNumber int, s *Sudoku) {
 	fmt.Println()
 
 	fmt.Printf(
-		"%s================ STEP %d ================%s\n",
+		"%s%s================ STEP %d ================%s\n",
 		Bold,
+		Normal,
 		stepNumber,
 		Reset,
 	)
 
 	fmt.Printf(
 		"%sTechnique:%s %s%s%s\n",
-		Bold,
+		Normal,
 		Reset,
 		Cyan,
 		step.Technique,
@@ -36,18 +44,18 @@ func PrintStep(step Step, stepNumber int, s *Sudoku) {
 	)
 
 	fmt.Printf(
-		"%sExplanation:%s %s%s%s\n",
-		Bold,
-		Reset,
+		"\n%s%s%s\n",
 		Yellow,
 		step.Explanation,
 		Reset,
 	)
 
-	if step.BeforeCandidates != 0 {
+	for _, detail := range step.Details {
 		fmt.Printf(
-			"Candidates: %v\n",
-			CandidateList(step.BeforeCandidates),
+			"%s  • %s%s\n",
+			Normal,
+			detail,
+			Reset,
 		)
 	}
 
@@ -68,30 +76,38 @@ func (s *Sudoku) printBoard(highlightRow, highlightCol int) {
 	fmt.Println("+-------+-------+-------+")
 
 	for row := range 9 {
-		fmt.Print("| ")
+		fmt.Printf("%s| ", Normal)
 
 		for col := range 9 {
 			value := s.Board[row][col]
 
-			if value == 0 {
+			switch {
+			case value == 0:
 				fmt.Print(". ")
-			} else if row == highlightRow && col == highlightCol {
+
+			case row == highlightRow && col == highlightCol:
 				fmt.Printf(
 					"%s%d%s ",
-					Green,
+					LightGreen,
 					value,
-					Reset,
+					Normal,
 				)
-			} else {
-				fmt.Printf("%d ", value)
+
+			default:
+				fmt.Printf(
+					"%s%d%s ",
+					Normal,
+					value,
+					Normal,
+				)
 			}
 
 			if col == 2 || col == 5 {
-				fmt.Print("| ")
+				fmt.Printf("%s| %s", Normal, Normal)
 			}
 		}
 
-		fmt.Println("|")
+		fmt.Printf("%s|%s\n", Normal, Reset)
 
 		if row == 2 || row == 5 {
 			fmt.Println("+-------+-------+-------+")
@@ -109,6 +125,5 @@ func WaitForEnter() {
 	)
 
 	reader := bufio.NewReader(os.Stdin)
-
 	_, _ = reader.ReadString('\n')
 }

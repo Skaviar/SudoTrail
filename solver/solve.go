@@ -1,6 +1,7 @@
 package solver
 
 func (s *Sudoku) SolveStep() (Step, bool) {
+	// Start with the simplest deductions.
 	if step, ok := FindFullHouse(s); ok {
 		return step, true
 	}

@@ -1,11 +1,11 @@
 package solver
 
-import (
-	"fmt"
-)
+import "fmt"
 
 func FindFullHouse(s *Sudoku) (Step, bool) {
-	// Check rows.
+	// --------------------------------------------------
+	// Rows
+	// --------------------------------------------------
 	for row := range 9 {
 		emptyCol := -1
 
@@ -22,10 +22,36 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 		}
 
 		if emptyCol >= 0 {
-			number := singleMissingNumberRow(*s, row)
+			number := singleMissingNumberRow(s, row)
 
 			if number == 0 {
 				continue
+			}
+
+			present := presentNumbersRow(s, row)
+
+			details := []string{
+				fmt.Sprintf(
+					"Row %d has only one empty cell: R%dC%d.",
+					row+1,
+					row+1,
+					emptyCol+1,
+				),
+				fmt.Sprintf(
+					"Numbers already present in Row %d: %v.",
+					row+1,
+					present,
+				),
+				fmt.Sprintf(
+					"The only number missing from the row is %d.",
+					number,
+				),
+				fmt.Sprintf(
+					"Therefore R%dC%d = %d.",
+					row+1,
+					emptyCol+1,
+					number,
+				),
 			}
 
 			s.Place(row, emptyCol, number)
@@ -33,27 +59,26 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 			return Step{
 				Technique: "Full House",
 				Explanation: fmt.Sprintf(
-					"Row %d has only one empty cell, R%dC%d, so the missing number is %d.",
+					"Row %d has only one empty cell, so its value is forced.",
 					row+1,
-					row+1,
-					emptyCol+1,
-					number,
 				),
-				Row:    row,
-				Col:    emptyCol,
-				Number: number,
+				Details: details,
+				Row:     row,
+				Col:     emptyCol,
+				Number:  number,
 			}, true
 		}
 	}
 
-	// Check columns.
+	// --------------------------------------------------
+	// Columns
+	// --------------------------------------------------
 	for col := range 9 {
 		emptyRow := -1
 
 		for row := range 9 {
 			if s.Board[row][col] == 0 {
 				if emptyRow != -1 {
-					// More than one empty cell.
 					emptyRow = -2
 					break
 				}
@@ -69,25 +94,51 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 				continue
 			}
 
+			present := presentNumbersColumn(s, col)
+
+			details := []string{
+				fmt.Sprintf(
+					"Column %d has only one empty cell: R%dC%d.",
+					col+1,
+					emptyRow+1,
+					col+1,
+				),
+				fmt.Sprintf(
+					"Numbers already present in Column %d: %v.",
+					col+1,
+					present,
+				),
+				fmt.Sprintf(
+					"The only number missing from the column is %d.",
+					number,
+				),
+				fmt.Sprintf(
+					"Therefore R%dC%d = %d.",
+					emptyRow+1,
+					col+1,
+					number,
+				),
+			}
+
 			s.Place(emptyRow, col, number)
 
 			return Step{
 				Technique: "Full House",
 				Explanation: fmt.Sprintf(
-					"Column %d has only one empty cell, R%dC%d, so the missing number is %d.",
+					"Column %d has only one empty cell, so its value is forced.",
 					col+1,
-					emptyRow+1,
-					col+1,
-					number,
 				),
-				Row:    emptyRow,
-				Col:    col,
-				Number: number,
+				Details: details,
+				Row:     emptyRow,
+				Col:     col,
+				Number:  number,
 			}, true
 		}
 	}
 
-	// Check boxes.
+	// --------------------------------------------------
+	// Boxes
+	// --------------------------------------------------
 	for boxRow := 0; boxRow < 9; boxRow += 3 {
 		for boxCol := 0; boxCol < 9; boxCol += 3 {
 			emptyRow := -1
@@ -97,7 +148,6 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 				for col := boxCol; col < boxCol+3; col++ {
 					if s.Board[row][col] == 0 {
 						if emptyRow != -1 {
-							// More than one empty cell.
 							emptyRow = -2
 							break
 						}
@@ -124,21 +174,44 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 				}
 
 				boxNumber := (boxRow/3)*3 + (boxCol / 3) + 1
+				present := presentNumbersBox(s, boxRow, boxCol)
+
+				details := []string{
+					fmt.Sprintf(
+						"Box %d has only one empty cell: R%dC%d.",
+						boxNumber,
+						emptyRow+1,
+						emptyCol+1,
+					),
+					fmt.Sprintf(
+						"Numbers already present in Box %d: %v.",
+						boxNumber,
+						present,
+					),
+					fmt.Sprintf(
+						"The only number missing from the box is %d.",
+						number,
+					),
+					fmt.Sprintf(
+						"Therefore R%dC%d = %d.",
+						emptyRow+1,
+						emptyCol+1,
+						number,
+					),
+				}
 
 				s.Place(emptyRow, emptyCol, number)
 
 				return Step{
 					Technique: "Full House",
 					Explanation: fmt.Sprintf(
-						"Box %d has only one empty cell, R%dC%d, so the missing number is %d.",
+						"Box %d has only one empty cell, so its value is forced.",
 						boxNumber,
-						emptyRow+1,
-						emptyCol+1,
-						number,
 					),
-					Row:    emptyRow,
-					Col:    emptyCol,
-					Number: number,
+					Details: details,
+					Row:     emptyRow,
+					Col:     emptyCol,
+					Number:  number,
 				}, true
 			}
 		}
@@ -147,7 +220,7 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 	return Step{}, false
 }
 
-func singleMissingNumberRow(s Sudoku, row int) int {
+func singleMissingNumberRow(s *Sudoku, row int) int {
 	var seen [10]bool
 
 	for col := range 9 {
@@ -187,11 +260,7 @@ func singleMissingNumberColumn(s *Sudoku, col int) int {
 	return 0
 }
 
-func singleMissingNumberBox(
-	s *Sudoku,
-	boxRow int,
-	boxCol int,
-) int {
+func singleMissingNumberBox(s *Sudoku, boxRow, boxCol int) int {
 	var seen [10]bool
 
 	for row := boxRow; row < boxRow+3; row++ {
@@ -211,4 +280,61 @@ func singleMissingNumberBox(
 	}
 
 	return 0
+}
+
+func presentNumbersRow(s *Sudoku, row int) []int {
+	var numbers []int
+
+	for number := 1; number <= 9; number++ {
+		for col := range 9 {
+			if int(s.Board[row][col]) == number {
+				numbers = append(numbers, number)
+				break
+			}
+		}
+	}
+
+	return numbers
+}
+
+func presentNumbersColumn(s *Sudoku, col int) []int {
+	var numbers []int
+
+	for number := 1; number <= 9; number++ {
+		for row := range 9 {
+			if int(s.Board[row][col]) == number {
+				numbers = append(numbers, number)
+				break
+			}
+		}
+	}
+
+	return numbers
+}
+
+func presentNumbersBox(s *Sudoku, boxRow, boxCol int) []int {
+	var numbers []int
+
+	for number := 1; number <= 9; number++ {
+		found := false
+
+		for row := boxRow; row < boxRow+3; row++ {
+			for col := boxCol; col < boxCol+3; col++ {
+				if int(s.Board[row][col]) == number {
+					found = true
+					break
+				}
+			}
+
+			if found {
+				break
+			}
+		}
+
+		if found {
+			numbers = append(numbers, number)
+		}
+	}
+
+	return numbers
 }

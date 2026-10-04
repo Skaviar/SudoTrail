@@ -4,25 +4,25 @@ import "math/bits"
 
 const AllCandidates uint16 = 0b1111111110
 
-func HasCandidate(mask uint16, number int) bool {
+func hasCandidate(mask uint16, number int) bool {
 	return mask&(1<<number) != 0
 }
 
-func RemoveCandidate(mask uint16, number int) uint16 {
+func removeCandidate(mask uint16, number int) uint16 {
 	return mask &^ (1 << number)
 }
 
-func CandidateCount(mask uint16) int {
+func candidateCount(mask uint16) int {
 	return bits.OnesCount16(mask)
 }
 
-func SingleCandidate(mask uint16) int {
-	if CandidateCount(mask) != 1 {
+func singleCandidate(mask uint16) int {
+	if candidateCount(mask) != 1 {
 		return 0
 	}
 
 	for number := 1; number <= 9; number++ {
-		if HasCandidate(mask, number) {
+		if hasCandidate(mask, number) {
 			return number
 		}
 	}
@@ -30,11 +30,11 @@ func SingleCandidate(mask uint16) int {
 	return 0
 }
 
-func CandidateList(mask uint16) []int {
+func candidateList(mask uint16) []int {
 	var result []int
 
 	for number := 1; number <= 9; number++ {
-		if HasCandidate(mask, number) {
+		if hasCandidate(mask, number) {
 			result = append(result, number)
 		}
 	}
