@@ -75,7 +75,6 @@ func explainCellCandidates(s *Sudoku, row, col int) []string {
 		),
 	)
 
-	// Row elimination
 	rowNums := rowNumbers(s, row)
 	afterRow := candidatesAfterRemoving(start, rowNums)
 
@@ -97,7 +96,6 @@ func explainCellCandidates(s *Sudoku, row, col int) []string {
 		),
 	)
 
-	// Column elimination
 	colNums := columnNumbers(s, col)
 	afterColumn := candidatesAfterRemoving(afterRow, colNums)
 
@@ -119,7 +117,6 @@ func explainCellCandidates(s *Sudoku, row, col int) []string {
 		),
 	)
 
-	// Box elimination
 	boxNums := boxNumbers(s, row, col)
 	afterBox := candidatesAfterRemoving(afterColumn, boxNums)
 
@@ -147,6 +144,10 @@ func explainCellCandidates(s *Sudoku, row, col int) []string {
 	return details
 }
 
+// --------------------------------------------------
+// Hidden Single reasoning
+// --------------------------------------------------
+
 func explainHiddenSingleRow(
 	s *Sudoku,
 	row int,
@@ -157,7 +158,7 @@ func explainHiddenSingleRow(
 	details = append(
 		details,
 		fmt.Sprintf(
-			"We are trying to place %d in Row %d.",
+			"We are looking for %d in Row %d.",
 			number,
 			row+1,
 		),
@@ -168,31 +169,40 @@ func explainHiddenSingleRow(
 			continue
 		}
 
-		candidates := s.Candidates[row][col]
+		if hasCandidate(s.Candidates[row][col], number) {
+			details = append(
+				details,
+				fmt.Sprintf(
+					"R%dC%d → %d is possible because %d is not in Column %d and not in Box %d.",
+					row+1,
+					col+1,
+					number,
+					number,
+					col+1,
+					boxNumber(row, col),
+				),
+			)
 
-		if hasCandidate(candidates, number) {
-			details = append(
-				details,
-				fmt.Sprintf(
-					"R%dC%d has candidates %v → %d is possible.",
-					row+1,
-					col+1,
-					candidateList(candidates),
-					number,
-				),
-			)
-		} else {
-			details = append(
-				details,
-				fmt.Sprintf(
-					"R%dC%d has candidates %v → %d is impossible.",
-					row+1,
-					col+1,
-					candidateList(candidates),
-					number,
-				),
-			)
+			continue
 		}
+
+		reason := hiddenSingleEliminationReason(
+			s,
+			row,
+			col,
+			number,
+		)
+
+		details = append(
+			details,
+			fmt.Sprintf(
+				"R%dC%d → %d is eliminated because %s.",
+				row+1,
+				col+1,
+				number,
+				reason,
+			),
+		)
 	}
 
 	return details
@@ -208,7 +218,7 @@ func explainHiddenSingleColumn(
 	details = append(
 		details,
 		fmt.Sprintf(
-			"We are trying to place %d in Column %d.",
+			"We are looking for %d in Column %d.",
 			number,
 			col+1,
 		),
@@ -219,31 +229,40 @@ func explainHiddenSingleColumn(
 			continue
 		}
 
-		candidates := s.Candidates[row][col]
+		if hasCandidate(s.Candidates[row][col], number) {
+			details = append(
+				details,
+				fmt.Sprintf(
+					"R%dC%d → %d is possible because %d is not in Row %d and not in Box %d.",
+					row+1,
+					col+1,
+					number,
+					number,
+					row+1,
+					boxNumber(row, col),
+				),
+			)
 
-		if hasCandidate(candidates, number) {
-			details = append(
-				details,
-				fmt.Sprintf(
-					"R%dC%d has candidates %v → %d is possible.",
-					row+1,
-					col+1,
-					candidateList(candidates),
-					number,
-				),
-			)
-		} else {
-			details = append(
-				details,
-				fmt.Sprintf(
-					"R%dC%d has candidates %v → %d is impossible.",
-					row+1,
-					col+1,
-					candidateList(candidates),
-					number,
-				),
-			)
+			continue
 		}
+
+		reason := hiddenSingleEliminationReason(
+			s,
+			row,
+			col,
+			number,
+		)
+
+		details = append(
+			details,
+			fmt.Sprintf(
+				"R%dC%d → %d is eliminated because %s.",
+				row+1,
+				col+1,
+				number,
+				reason,
+			),
+		)
 	}
 
 	return details
@@ -257,14 +276,14 @@ func explainHiddenSingleBox(
 ) []string {
 	var details []string
 
-	boxNumber := (boxRow/3)*3 + (boxCol / 3) + 1
+	box := (boxRow/3)*3 + (boxCol / 3) + 1
 
 	details = append(
 		details,
 		fmt.Sprintf(
-			"We are trying to place %d in Box %d.",
+			"We are looking for %d in Box %d.",
 			number,
-			boxNumber,
+			box,
 		),
 	)
 
@@ -274,33 +293,113 @@ func explainHiddenSingleBox(
 				continue
 			}
 
-			candidates := s.Candidates[row][col]
-
-			if hasCandidate(candidates, number) {
+			if hasCandidate(s.Candidates[row][col], number) {
 				details = append(
 					details,
 					fmt.Sprintf(
-						"R%dC%d has candidates %v → %d is possible.",
+						"R%dC%d → %d is possible because %d is not in Row %d and not in Column %d.",
 						row+1,
 						col+1,
-						candidateList(candidates),
 						number,
+						number,
+						row+1,
+						col+1,
 					),
 				)
-			} else {
-				details = append(
-					details,
-					fmt.Sprintf(
-						"R%dC%d has candidates %v → %d is impossible.",
-						row+1,
-						col+1,
-						candidateList(candidates),
-						number,
-					),
+
+				continue
+			}
+
+			reason := hiddenSingleEliminationReason(
+				s,
+				row,
+				col,
+				number,
+			)
+
+			details = append(
+				details,
+				fmt.Sprintf(
+					"R%dC%d → %d is eliminated because %s.",
+					row+1,
+					col+1,
+					number,
+					reason,
+				),
+			)
+		}
+	}
+
+	return details
+}
+
+// --------------------------------------------------
+// Hidden Single elimination reasoning
+// --------------------------------------------------
+
+func hiddenSingleEliminationReason(
+	s *Sudoku,
+	row int,
+	col int,
+	number int,
+) string {
+	// Check row.
+	for c := range 9 {
+		if c == col {
+			continue
+		}
+
+		if int(s.Board[row][c]) == number {
+			return fmt.Sprintf(
+				"%d is already in Row %d",
+				number,
+				row+1,
+			)
+		}
+	}
+
+	// Check column.
+	for r := range 9 {
+		if r == row {
+			continue
+		}
+
+		if int(s.Board[r][col]) == number {
+			return fmt.Sprintf(
+				"%d is already in Column %d",
+				number,
+				col+1,
+			)
+		}
+	}
+
+	// Check box.
+	boxRow := (row / 3) * 3
+	boxCol := (col / 3) * 3
+
+	for r := boxRow; r < boxRow+3; r++ {
+		for c := boxCol; c < boxCol+3; c++ {
+			if r == row && c == col {
+				continue
+			}
+
+			if int(s.Board[r][c]) == number {
+				return fmt.Sprintf(
+					"%d is already in Box %d",
+					number,
+					boxNumber(row, col),
 				)
 			}
 		}
 	}
 
-	return details
+	return "the cell's row, column, or box prevents this placement"
+}
+
+// --------------------------------------------------
+// Box helper
+// --------------------------------------------------
+
+func boxNumber(row, col int) int {
+	return (row/3)*3 + (col / 3) + 1
 }

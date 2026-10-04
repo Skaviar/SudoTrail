@@ -42,9 +42,7 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 					emptyCol+1,
 					row+1,
 				),
-				fmt.Sprintf(
-					"A Sudoku row must contain every number from 1 through 9 exactly once.",
-				),
+				"A Sudoku row must contain every number from 1 through 9 exactly once.",
 				fmt.Sprintf(
 					"The only number missing from Row %d is %d.",
 					row+1,
@@ -113,9 +111,7 @@ func FindFullHouse(s *Sudoku) (Step, bool) {
 					col+1,
 					col+1,
 				),
-				fmt.Sprintf(
-					"A Sudoku column must contain every number from 1 through 9 exactly once.",
-				),
+				"A Sudoku column must contain every number from 1 through 9 exactly once.",
 				fmt.Sprintf(
 					"The only number missing from Column %d is %d.",
 					col+1,
