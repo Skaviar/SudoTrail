@@ -40,3 +40,13 @@ func (s *Sudoku) Solve() {
 		stepNumber++
 	}
 }
+
+// Benchmark mode: no printing and no pauses.
+func (s *Sudoku) SolveAutomatically() {
+	for {
+		_, ok := s.SolveStep()
+		if !ok {
+			return
+		}
+	}
+}
