@@ -60,8 +60,11 @@ func PrintStep(step Step, stepNumber int, s *Sudoku) {
 	}
 
 	fmt.Println()
-
-	s.PrintHighlighted(step.Row, step.Col)
+	if len(step.Eliminations) > 0 {
+		s.Print()
+	} else {
+		s.PrintHighlighted(step.Row, step.Col)
+	}
 }
 
 func (s *Sudoku) Print() {

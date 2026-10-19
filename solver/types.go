@@ -13,6 +13,12 @@ type Sudoku struct {
 	Candidates [9][9]uint16
 }
 
+type CandidateElimination struct {
+	Row    int
+	Col    int
+	Number int
+}
+
 type Step struct {
 	Technique        string
 	Explanation      string
@@ -21,4 +27,7 @@ type Step struct {
 	Col              int
 	Number           int
 	BeforeCandidates uint16
+
+	// Populated by candidate-elimination techniques.
+	Eliminations []CandidateElimination
 }

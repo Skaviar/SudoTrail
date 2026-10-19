@@ -1,7 +1,6 @@
 package solver
 
 func (s *Sudoku) SolveStep() (Step, bool) {
-	// Start with the simplest deductions.
 	if step, ok := FindFullHouse(s); ok {
 		return step, true
 	}
@@ -14,9 +13,16 @@ func (s *Sudoku) SolveStep() (Step, bool) {
 		return step, true
 	}
 
+	if step, ok := FindPointing(s); ok {
+		return step, true
+	}
+
+	if step, ok := FindClaiming(s); ok {
+		return step, true
+	}
+
 	return Step{}, false
 }
-
 func (s *Sudoku) Solve() {
 	stepNumber := 1
 
