@@ -21,6 +21,16 @@ func (s *Sudoku) SolveStep() (Step, bool) {
 		return step, true
 	}
 
+	if step, ok := FindHiddenSubset(s, 2); ok {
+		return step, true
+	}
+	if step, ok := FindHiddenSubset(s, 3); ok {
+		return step, true
+	}
+	if step, ok := FindHiddenSubset(s, 4); ok {
+		return step, true
+	}
+
 	return Step{}, false
 }
 func (s *Sudoku) Solve() {

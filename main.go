@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/s-threepio/godoku/solver"
@@ -143,14 +144,36 @@ func readSudoku(reader *bufio.Reader) (solver.Puzzle, bool) {
 	}, true
 }
 
+type BenchmarkStats struct {
+	Attempted atomic.Int64
+	Solved    atomic.Int64
+}
+
 func runBenchmark(puzzles []solver.Puzzle) {
+	const reportInterval = 5 * time.Second
+
+	var stats BenchmarkStats
 	start := time.Now()
-	attempted, solved := 0, 0
+	stop := make(chan struct{})
+	reporterDone := make(chan struct{})
 
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+	fmt.Println("\nGodoku — Database Benchmark")
+	fmt.Println(strings.Repeat("─", 64))
 
-	fmt.Println("\nBenchmark started...")
+	go func() {
+		defer close(reporterDone)
+		ticker := time.NewTicker(reportInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				printBenchmarkProgress(&stats, len(puzzles), start)
+			case <-stop:
+				return
+			}
+		}
+	}()
 
 	for i, puzzle := range puzzles {
 		if len(puzzle.Puzzle) != 81 {
@@ -162,33 +185,93 @@ func runBenchmark(puzzles []solver.Puzzle) {
 		}
 		s := &solver.Sudoku{}
 		s.InitializeSudoku(puzzle)
-
-		// Important: Solve() currently prints steps and waits for Enter.
-		// Replace this with your non-interactive solving method.
 		s.SolveAutomatically()
 
-		attempted++
+		stats.Attempted.Add(1)
 		if isComplete(s) {
-			solved++
-		}
-
-		select {
-		case <-ticker.C:
-			fmt.Printf(
-				"\rAttempted: %d | Solved: %d | Elapsed: %s",
-				attempted,
-				solved,
-				time.Since(start).Round(time.Second),
-			)
-		default:
+			stats.Solved.Add(1)
 		}
 	}
 
+	close(stop)
+	<-reporterDone
+
+	printBenchmarkSummary(&stats, len(puzzles), start)
+}
+
+func printBenchmarkProgress(stats *BenchmarkStats, total int, start time.Time) {
+	attempted := stats.Attempted.Load()
+	solved := stats.Solved.Load()
+	elapsed := time.Since(start)
+
+	progress := percentage(attempted, int64(total))
+	solveRate := percentage(solved, attempted)
+	rate := float64(attempted) / max(elapsed.Seconds(), 0.001)
+
+	remaining := int64(total) - attempted
+	eta := time.Duration(0)
+	if rate > 0 {
+		eta = time.Duration(float64(remaining)/rate) * time.Second
+	}
+
+	fmt.Printf("\033[H\033[2J")
+	fmt.Println("Godoku — Database Benchmark")
+	fmt.Println(strings.Repeat("─", 64))
+	fmt.Printf("Progress   %s %6.2f%%  (%d / %d)\n",
+		progressBar(progress, 24), progress, attempted, total)
+	fmt.Printf("Solved     %-10d Unsolved     %d\n",
+		solved, attempted-solved)
+	fmt.Printf("Solve rate %-10s Throughput   %.1f puzzles/sec\n",
+		fmt.Sprintf("%.2f%%", solveRate), rate)
+	fmt.Printf("Elapsed    %-10s ETA          %s\n",
+		formatDuration(elapsed), formatDuration(eta))
+	fmt.Println(strings.Repeat("─", 64))
+}
+
+func printBenchmarkSummary(stats *BenchmarkStats, total int, start time.Time) {
+	attempted := stats.Attempted.Load()
+	solved := stats.Solved.Load()
+	elapsed := time.Since(start)
+
 	fmt.Printf("\nBenchmark complete\n")
-	fmt.Printf("Attempted: %d\n", attempted)
-	fmt.Printf("Solved: %d\n", solved)
-	fmt.Printf("Unsolved: %d\n", attempted-solved)
-	fmt.Printf("Elapsed: %s\n", time.Since(start).Round(time.Millisecond))
+	fmt.Println(strings.Repeat("─", 40))
+	fmt.Printf("Total puzzles : %d\n", total)
+	fmt.Printf("Attempted     : %d\n", attempted)
+	fmt.Printf("Solved        : %d\n", solved)
+	fmt.Printf("Unsolved      : %d\n", attempted-solved)
+	fmt.Printf("Solve rate    : %.2f%%\n", percentage(solved, attempted))
+	fmt.Printf("Elapsed       : %s\n", formatDuration(elapsed))
+	fmt.Printf("Throughput    : %.2f puzzles/sec\n",
+		float64(attempted)/max(elapsed.Seconds(), 0.001))
+}
+
+func percentage(numerator, denominator int64) float64 {
+	if denominator == 0 {
+		return 0
+	}
+	return float64(numerator) * 100 / float64(denominator)
+}
+
+func progressBar(percent float64, width int) string {
+	filled := int(percent * float64(width) / 100)
+	if filled > width {
+		filled = width
+	}
+	return "[" + strings.Repeat("█", filled) +
+		strings.Repeat("░", width-filled) + "]"
+}
+
+func formatDuration(d time.Duration) string {
+	seconds := int64(d.Seconds())
+	if seconds < 0 {
+		seconds = 0
+	}
+
+	hours := seconds / 3600
+	minutes := (seconds % 3600) / 60
+	secs := seconds % 60
+
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, secs)
 }
 
 func isComplete(s *solver.Sudoku) bool {
