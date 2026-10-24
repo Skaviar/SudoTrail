@@ -1,9 +1,9 @@
-package solver
+package main
 
 import (
 	"bufio"
 	"fmt"
-	"os"
+	"github.com/s-threepio/godoku/solver"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	LightGreen = "\033[92m"
 )
 
-func PrintStep(step Step, stepNumber int, s *Sudoku) {
+func PrintStep(step solver.Step, stepNumber int, s *solver.Sudoku) {
 	fmt.Println()
 
 	fmt.Printf(
@@ -61,21 +61,13 @@ func PrintStep(step Step, stepNumber int, s *Sudoku) {
 
 	fmt.Println()
 	if len(step.Eliminations) > 0 {
-		s.Print()
+		printBoard(s, -1, -1)
 	} else {
-		s.PrintHighlighted(step.Row, step.Col)
+		printBoard(s, step.Row, step.Col)
 	}
 }
 
-func (s *Sudoku) Print() {
-	s.printBoard(-1, -1)
-}
-
-func (s *Sudoku) PrintHighlighted(row, col int) {
-	s.printBoard(row, col)
-}
-
-func (s *Sudoku) printBoard(highlightRow, highlightCol int) {
+func printBoard(s *solver.Sudoku, highlightRow, highlightCol int) {
 	fmt.Println("+-------+-------+-------+")
 
 	for row := range 9 {
@@ -120,13 +112,23 @@ func (s *Sudoku) printBoard(highlightRow, highlightCol int) {
 	fmt.Println("+-------+-------+-------+")
 }
 
-func WaitForEnter() {
-	fmt.Printf(
-		"\n%sPress Enter to continue...%s",
-		Blue,
-		Reset,
-	)
-
-	reader := bufio.NewReader(os.Stdin)
-	_, _ = reader.ReadString('\n')
+// Use the menu's reader for step input as well, so buffered input is preserved.
+func solveInteractively(s *solver.Sudoku, reader *bufio.Reader) {
+	printBoard(s, -1, -1)
+	for stepNumber := 1; ; stepNumber++ {
+		step, ok := s.SolveStep()
+		if !ok {
+			break
+		}
+		PrintStep(step, stepNumber, s)
+		fmt.Print("\nPress Enter to continue...")
+		if _, err := reader.ReadString('\n'); err != nil {
+			return
+		}
+	}
+	if s.IsSolved() {
+		fmt.Println("\nPuzzle solved.")
+	} else {
+		fmt.Println("\nNo supported technique can make further progress.")
+	}
 }

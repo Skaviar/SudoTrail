@@ -61,24 +61,24 @@ func main() {
 				continue
 			}
 
-			s := &solver.Sudoku{}
-			s.InitializeSudoku(puzzle)
-			s.Print()
-			s.Solve()
-			fmt.Println("\nAfter solving:")
-			s.Print()
+			s, err := solver.NewSudoku(puzzle)
+			if err != nil {
+				fmt.Println("Invalid puzzle:", err)
+				continue
+			}
+			solveInteractively(s, reader)
 
 		case "2":
 			puzzle := puzzles[rng.Intn(len(puzzles))]
 			fmt.Printf("\nPuzzle ID: %s | Difficulty: %s\n",
 				puzzle.Id, puzzle.Difficulty)
 
-			s := &solver.Sudoku{}
-			s.InitializeSudoku(puzzle)
-			s.Print()
-			s.Solve()
-			fmt.Println("\nAfter solving:")
-			s.Print()
+			s, err := solver.NewSudoku(puzzle)
+			if err != nil {
+				fmt.Println("Invalid puzzle:", err)
+				continue
+			}
+			solveInteractively(s, reader)
 
 		case "3":
 			runBenchmark(puzzles)
@@ -179,12 +179,14 @@ func runBenchmark(puzzles []solver.Puzzle) {
 		if len(puzzle.Puzzle) != 81 {
 			continue
 		}
-		s := &solver.Sudoku{}
-		s.InitializeSudoku(puzzle)
+		s, err := solver.NewSudoku(puzzle)
+		if err != nil {
+			continue
+		}
 		s.SolveAutomatically()
 
 		stats.Attempted.Add(1)
-		if isComplete(s) {
+		if s.IsSolved() {
 			stats.Solved.Add(1)
 		}
 	}
@@ -270,21 +272,10 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, secs)
 }
 
-func isComplete(s *solver.Sudoku) bool {
-	for row := 0; row < 9; row++ {
-		for col := 0; col < 9; col++ {
-			if s.Board[row][col] == 0 {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func appendPuzzle(puzzles *[]solver.Puzzle, dataLine string) {
 	dataArray := strings.Split(dataLine, ",")
 
-	if len(dataLine) < 5 {
+	if len(dataArray) != 5 || dataArray[0] == "id" {
 		return
 	}
 

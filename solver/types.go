@@ -12,22 +12,3 @@ type Sudoku struct {
 	Board      [9][9]int8
 	Candidates [9][9]uint16
 }
-
-type CandidateElimination struct {
-	Row    int
-	Col    int
-	Number int
-}
-
-type Step struct {
-	Technique        string
-	Explanation      string
-	Details          []string
-	Row              int
-	Col              int
-	Number           int
-	BeforeCandidates uint16
-
-	// Populated by candidate-elimination techniques.
-	Eliminations []CandidateElimination
-}

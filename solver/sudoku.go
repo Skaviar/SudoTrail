@@ -1,19 +1,62 @@
 package solver
 
-func (s *Sudoku) InitializeSudoku(p Puzzle) {
+import "fmt"
+
+// NewSudoku validates clues before building candidates. Both 0 and . mean empty.
+func NewSudoku(p Puzzle) (*Sudoku, error) {
+	if len(p.Puzzle) != 81 {
+		return nil, fmt.Errorf("puzzle must contain exactly 81 characters")
+	}
+	s := &Sudoku{}
+	for index, ch := range []byte(p.Puzzle) {
+		if ch == '.' || ch == '0' {
+			continue
+		}
+		if ch < '1' || ch > '9' {
+			return nil, fmt.Errorf("invalid character at position %d", index+1)
+		}
+		s.Board[index/9][index%9] = int8(ch - '0')
+	}
+	for _, unit := range allUnits() {
+		var seen uint16
+		for _, cell := range unit.cells {
+			number := int(s.Board[cell.Row][cell.Col])
+			if number == 0 {
+				continue
+			}
+			if hasCandidate(seen, number) {
+				return nil, fmt.Errorf("duplicate %d in %s", number, unit.name)
+			}
+			seen |= 1 << number
+		}
+	}
+	s.initializeCandidates()
 	for row := range 9 {
 		for col := range 9 {
-			index := row*9 + col
-
-			if p.Puzzle[index] == '.' {
-				s.Board[row][col] = 0
-			} else {
-				s.Board[row][col] = int8(p.Puzzle[index] - '0')
+			if s.Board[row][col] == 0 && s.Candidates[row][col] == 0 {
+				return nil, fmt.Errorf("%s has no possible digits", cellName(row, col))
 			}
 		}
 	}
+	return s, nil
+}
 
-	s.initializeCandidates()
+// IsSolved verifies that every unit contains all nine digits.
+func (s *Sudoku) IsSolved() bool {
+	for _, unit := range allUnits() {
+		var digits uint16
+		for _, cell := range unit.cells {
+			number := int(s.Board[cell.Row][cell.Col])
+			if number < 1 || number > 9 {
+				return false
+			}
+			digits |= 1 << number
+		}
+		if digits != AllCandidates {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Sudoku) initializeCandidates() {

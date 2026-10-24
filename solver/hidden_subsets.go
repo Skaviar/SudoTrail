@@ -1,20 +1,13 @@
-
 package solver
 
 import (
 	"fmt"
 	"math/bits"
-	"strings"
 )
 
-type subsetUnit struct {
-	name  string
-	cells [][2]int
-}
-
-// FindHiddenSubset finds one Hidden Pair (size 2),
+// ApplyHiddenSubset finds one Hidden Pair (size 2),
 // Hidden Triple (size 3), or Hidden Quadruple (size 4).
-func FindHiddenSubset(s *Sudoku, size int) (Step, bool) {
+func ApplyHiddenSubset(s *Sudoku, size int) (Step, bool) {
 	if size < 2 || size > 4 {
 		return Step{}, false
 	}
@@ -25,7 +18,7 @@ func FindHiddenSubset(s *Sudoku, size int) (Step, bool) {
 		4: "Hidden Quadruple",
 	}[size]
 
-	for _, unit := range getSubsetUnits() {
+	for _, unit := range allUnits() {
 		// Try every combination of 'size' digits.
 		for digitMask := uint16(1); digitMask <= AllCandidates; digitMask++ {
 			// Candidate bit 0 is unused.
@@ -33,13 +26,13 @@ func FindHiddenSubset(s *Sudoku, size int) (Step, bool) {
 				continue
 			}
 
-			var subsetCells [][2]int
+			var subsetCells []Cell
 			digitFound := make(map[int]bool)
 
 			// Find all cells in this unit that can contain
 			// at least one of the selected digits.
 			for _, cell := range unit.cells {
-				row, col := cell[0], cell[1]
+				row, col := cell.Row, cell.Col
 
 				if s.Board[row][col] != 0 {
 					continue
@@ -79,7 +72,7 @@ func FindHiddenSubset(s *Sudoku, size int) (Step, bool) {
 			var eliminations []CandidateElimination
 
 			for _, cell := range subsetCells {
-				row, col := cell[0], cell[1]
+				row, col := cell.Row, cell.Col
 
 				for digit := 1; digit <= 9; digit++ {
 					if digitMask&(1<<digit) != 0 {
@@ -140,53 +133,6 @@ func FindHiddenSubset(s *Sudoku, size int) (Step, bool) {
 	return Step{}, false
 }
 
-// getSubsetUnits returns all 27 Sudoku units:
-// 9 rows, 9 columns, and 9 boxes.
-func getSubsetUnits() []subsetUnit {
-	units := make([]subsetUnit, 0, 27)
-
-	for row := 0; row < 9; row++ {
-		cells := make([][2]int, 0, 9)
-		for col := 0; col < 9; col++ {
-			cells = append(cells, [2]int{row, col})
-		}
-		units = append(units, subsetUnit{
-			name:  fmt.Sprintf("Row %d", row+1),
-			cells: cells,
-		})
-	}
-
-	for col := 0; col < 9; col++ {
-		cells := make([][2]int, 0, 9)
-		for row := 0; row < 9; row++ {
-			cells = append(cells, [2]int{row, col})
-		}
-		units = append(units, subsetUnit{
-			name:  fmt.Sprintf("Column %d", col+1),
-			cells: cells,
-		})
-	}
-
-	for boxRow := 0; boxRow < 9; boxRow += 3 {
-		for boxCol := 0; boxCol < 9; boxCol += 3 {
-			cells := make([][2]int, 0, 9)
-
-			for row := boxRow; row < boxRow+3; row++ {
-				for col := boxCol; col < boxCol+3; col++ {
-					cells = append(cells, [2]int{row, col})
-				}
-			}
-
-			units = append(units, subsetUnit{
-				name:  fmt.Sprintf("Box %d", boxNumber(boxRow, boxCol)),
-				cells: cells,
-			})
-		}
-	}
-
-	return units
-}
-
 func maskDigits(mask uint16) []string {
 	var digits []string
 
@@ -197,16 +143,4 @@ func maskDigits(mask uint16) []string {
 	}
 
 	return digits
-}
-
-// Keep this helper if you don't already have an equivalent
-// in your solver package.
-func subsetCellNames(cells [][2]int) string {
-	names := make([]string, 0, len(cells))
-
-	for _, cell := range cells {
-		names = append(names, cellName(cell[0], cell[1]))
-	}
-
-	return strings.Join(names, ", ")
 }

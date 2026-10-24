@@ -1,63 +1,57 @@
 package solver
 
+// SolveStep applies one technique. A false result means no supported move remains.
 func (s *Sudoku) SolveStep() (Step, bool) {
-	if step, ok := FindFullHouse(s); ok {
+	if step, ok := ApplyFullHouse(s); ok {
 		return step, true
 	}
 
-	if step, ok := FindHiddenSingle(s); ok {
+	if step, ok := ApplyHiddenSingle(s); ok {
 		return step, true
 	}
 
-	if step, ok := FindNakedSingle(s); ok {
+	if step, ok := ApplyNakedSingle(s); ok {
 		return step, true
 	}
 
-	if step, ok := FindPointing(s); ok {
+	if step, ok := ApplyPointing(s); ok {
 		return step, true
 	}
 
-	if step, ok := FindClaiming(s); ok {
+	if step, ok := ApplyClaiming(s); ok {
 		return step, true
 	}
 
-	if step, ok := FindHiddenSubset(s, 2); ok {
+	if step, ok := ApplyHiddenSubset(s, 2); ok {
 		return step, true
 	}
-	if step, ok := FindHiddenSubset(s, 3); ok {
+	if step, ok := ApplyHiddenSubset(s, 3); ok {
 		return step, true
 	}
-	if step, ok := FindHiddenSubset(s, 4); ok {
+	if step, ok := ApplyHiddenSubset(s, 4); ok {
 		return step, true
 	}
 
 	return Step{}, false
 }
-func (s *Sudoku) Solve() {
-	stepNumber := 1
+
+// Solve applies available techniques and returns the complete history.
+// Inspect IsSolved afterward to distinguish a solved puzzle from a stuck one.
+func (s *Sudoku) Solve() *SolverHistory {
 	history := NewSolverHistory(s)
 	for {
 		step, ok := s.SolveStep()
-
 		if !ok {
-			break
+			return history
 		}
-
 		history.RecordStep(s, step)
-
-		PrintStep(step, stepNumber, s)
-
-		WaitForEnter()
-
-		stepNumber++
 	}
 }
 
-// Benchmark mode: no printing and no pauses.
+// SolveAutomatically avoids history allocation for database benchmarks.
 func (s *Sudoku) SolveAutomatically() {
 	for {
-		_, ok := s.SolveStep()
-		if !ok {
+		if _, ok := s.SolveStep(); !ok {
 			return
 		}
 	}
