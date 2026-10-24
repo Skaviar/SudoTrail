@@ -3,7 +3,10 @@ package solver
 import "fmt"
 
 // Cell identifies a position. Row and Col are zero-based.
-type Cell struct{ Row, Col int }
+type Cell struct {
+	Row int `json:"row"`
+	Col int `json:"col"`
+}
 
 // A unit is a row, column, or box: nine cells containing digits 1–9.
 type unit struct {

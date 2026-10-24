@@ -4,40 +4,17 @@ import "fmt"
 
 // NewSudoku validates clues before building candidates. Both 0 and . mean empty.
 func NewSudoku(p Puzzle) (*Sudoku, error) {
-	if len(p.Puzzle) != 81 {
-		return nil, fmt.Errorf("puzzle must contain exactly 81 characters")
+	if issues := ValidatePuzzle(p.Puzzle); len(issues) > 0 {
+		return nil, fmt.Errorf("%s", issues[0].Message)
 	}
 	s := &Sudoku{}
 	for index, ch := range []byte(p.Puzzle) {
 		if ch == '.' || ch == '0' {
 			continue
 		}
-		if ch < '1' || ch > '9' {
-			return nil, fmt.Errorf("invalid character at position %d", index+1)
-		}
 		s.Board[index/9][index%9] = int8(ch - '0')
 	}
-	for _, unit := range allUnits() {
-		var seen uint16
-		for _, cell := range unit.cells {
-			number := int(s.Board[cell.Row][cell.Col])
-			if number == 0 {
-				continue
-			}
-			if hasCandidate(seen, number) {
-				return nil, fmt.Errorf("duplicate %d in %s", number, unit.name)
-			}
-			seen |= 1 << number
-		}
-	}
 	s.initializeCandidates()
-	for row := range 9 {
-		for col := range 9 {
-			if s.Board[row][col] == 0 && s.Candidates[row][col] == 0 {
-				return nil, fmt.Errorf("%s has no possible digits", cellName(row, col))
-			}
-		}
-	}
 	return s, nil
 }
 

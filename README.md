@@ -51,3 +51,73 @@ For benchmarks, `SolveAutomatically()` skips history allocation.
 
 Candidate eliminations must be preserved between steps. Recalculating every
 candidate from the board would undo deductions such as Pointing or Hidden Pairs.
+
+## Web API (no UI yet)
+
+Run `go run ./cmd/web` from the project root. The API listens on
+`http://127.0.0.1:8080`. Options:
+
+```sh
+go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
+```
+
+Benchmarks remain available only through the terminal app (`go run .`).
+The web server indexes CSV record offsets once at startup and reads a random
+record on demand. It does not return the database solution. If the CSV is
+missing or unusable, manual validation and solving still work; random returns 503.
+
+### Validate a puzzle
+
+`POST /api/validate` accepts `{"puzzle":"<81 characters>"}`.
+Digits 1–9 are clues; `0` and `.` are empty. A future grid can be filled in any
+order, then serialized row by row for this request.
+
+```json
+{"valid":false,"issues":[{"message":"duplicate 1 in Row 1","cells":[{"row":0,"col":0},{"row":0,"col":1}]}]}
+```
+
+The example shows one issue; the response includes all detected conflicts.
+Coordinates are zero-based. Conflicting clues, invalid characters, and empty
+cells with no candidates are reported. A conflict-free board returns
+`{"valid":true,"issues":[]}`. This means **no local conflicts found**, not proof
+of solvability or a unique solution. An empty board passes these checks.
+Validation results use HTTP 200; malformed JSON uses HTTP 400.
+
+### Solve a puzzle
+
+`POST /api/solve` accepts the same request. Invalid clues return HTTP 400 with
+`valid:false` and `issues`. A valid request returns:
+
+```text
+{
+  "solved": true or false,
+  "status": "solved" or "stuck",
+  "states": [
+    {"board": <9×9 array>, "candidates": <9×9 masks>, "step": null},
+    {"board": <9×9 array>, "candidates": <9×9 masks>, "step": <applied step>}
+  ]
+}
+```
+
+Each step includes `technique`, `explanation`, `details`, `row`, `col`, `number`,
+`beforeCandidates`, and `eliminations`. A placement has `number` from 1–9;
+a candidate-elimination step uses its `eliminations` list instead. Each elimination
+has `row`, `col`, and `number`. Candidate masks preserve bit positions 1–9.
+The first state is always the original board. `stuck` means supported techniques
+made no further progress; it does not mean the puzzle is unsolvable.
+
+### Load a random puzzle
+
+`GET /api/puzzles/random` returns:
+
+```text
+{"id":"1","puzzle":"<81 characters>","difficulty":"2.2"}
+```
+
+This only loads the puzzle. Send it to `/api/solve` when ready to generate history.
+
+JSON requests have a 4096-byte limit and must contain one object with a `puzzle`
+string. Unexpected fields are rejected. General API errors use `{"error":"..."}`.
+HTTP routing returns 404 for unknown paths and 405 for unsupported methods.
+Implementation: `cmd/web/main.go` starts the server; `internal/webapi` contains
+handlers and database access; `solver/validation.go` shares validation with the CLI.
