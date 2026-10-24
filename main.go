@@ -175,12 +175,8 @@ func runBenchmark(puzzles []solver.Puzzle) {
 		}
 	}()
 
-	for i, puzzle := range puzzles {
+	for _, puzzle := range puzzles {
 		if len(puzzle.Puzzle) != 81 {
-			fmt.Printf(
-				"Invalid puzzle: index=%d ID=%q length=%d puzzle=%q\n",
-				i, puzzle.Id, len(puzzle.Puzzle), puzzle.Puzzle,
-			)
 			continue
 		}
 		s := &solver.Sudoku{}

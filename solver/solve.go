@@ -35,13 +35,15 @@ func (s *Sudoku) SolveStep() (Step, bool) {
 }
 func (s *Sudoku) Solve() {
 	stepNumber := 1
-
+	history := NewSolverHistory(s)
 	for {
 		step, ok := s.SolveStep()
 
 		if !ok {
 			break
 		}
+
+		history.RecordStep(s, step)
 
 		PrintStep(step, stepNumber, s)
 
