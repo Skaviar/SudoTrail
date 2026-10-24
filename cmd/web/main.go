@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/s-threepio/godoku/internal/webapi"
+	"github.com/s-threepio/godoku/web"
 )
 
 func main() {
@@ -22,7 +23,10 @@ func main() {
 		defer catalog.Close()
 		random = catalog.Random
 	}
-	server := &http.Server{Addr: *addr, Handler: webapi.NewHandler(random), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
+	mux := http.NewServeMux()
+	mux.Handle("/api/", webapi.NewHandler(random))
+	mux.Handle("/", web.Handler())
+	server := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
 	log.Printf("Godoku API listening on http://%s", *addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)

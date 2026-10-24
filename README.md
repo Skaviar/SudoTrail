@@ -52,14 +52,27 @@ For benchmarks, `SolveAutomatically()` skips history allocation.
 Candidate eliminations must be preserved between steps. Recalculating every
 candidate from the board would undo deductions such as Pointing or Hidden Pairs.
 
-## Web API (no UI yet)
+## Web interface and API
 
-Run `go run ./cmd/web` from the project root. The API listens on
+Run `go run ./cmd/web` from the project root. The website and API listen on
 `http://127.0.0.1:8080`. Options:
 
 ```sh
 go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
 ```
+
+Open `http://127.0.0.1:8080` in a browser. The interface supports:
+
+- Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear.
+- Validating clues and highlighting conflicting cells.
+- Loading a random database puzzle.
+- Solving and exploring history using Previous/Next, First/Last, or a slider.
+- Viewing candidate marks, new placements, and crossed-out eliminated candidates.
+- Returning to the original clues for editing, or clearing the board.
+
+The HTML, CSS, and JavaScript in `web/` are embedded in the Go executable.
+Restart `go run ./cmd/web` after changing frontend files. No Node build or
+separate frontend server is required.
 
 Benchmarks remain available only through the terminal app (`go run .`).
 The web server indexes CSV record offsets once at startup and reads a random
