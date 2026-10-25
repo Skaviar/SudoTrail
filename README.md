@@ -149,3 +149,38 @@ Steps may include `visual` with `sources` (cell coordinates), `digits` (the digi
 supporting the deduction), and `units` (`kind`: `row`, `column`, or `box`, plus a
 zero-based `index`). These fields are recorded by the techniques themselves;
 the UI does not infer evidence from explanation strings.
+
+### Importing a Sudoku photo
+
+Use **Import a photo** to choose an image, or **Take photo** to use a phone's
+camera picker. The browser decodes the photo locally; images are not uploaded
+to the Go API or an OCR service.
+
+1. Rotate the photo if needed, then drag handles 1–4 clockwise to the outer grid
+   corners (top left, top right, bottom right, bottom left). Percentage fields
+   offer an accessible alternative to dragging. The guide lines should match
+   all nine rows and columns.
+2. Choose **Read the grid**. Perspective correction straightens the selected
+   grid, grid-line trimming and connected components isolate printed digits,
+   and Tesseract.js reads nonempty cells.
+3. Review the detected 9×9 board against the photo. Amber means uncertain or
+   unreadable; red indicates duplicate clues. Edit or clear any cell, and check
+   blanks for missed digits. Choose **Use this puzzle** when ready.
+4. The main board remains editable. Validate before solving.
+
+Recognition targets clear, printed, upright 9×9 puzzles. Handwriting, tiny
+pencil marks, blur, strong shadows, cropped digits, and incorrect corner
+alignment can cause mistakes; no OCR result is automatically submitted to solve.
+
+Tesseract.js 6.0.1 and its worker/WASM/language data download from their public
+CDNs on first use, so photo recognition requires internet access to load those
+resources. No paid API, secret key, Node build, or Go OCR dependency is needed.
+The normal manual-entry and solver features do not depend on OCR downloads.
+The file picker accepts browser-supported images up to 20 MB; use JPEG/PNG/WebP
+if a phone-specific format cannot be decoded. Closing the dialog cancels an
+active recognition job without replacing the current puzzle.
+
+On phones, solving uses a compact board-first layout with a fixed bottom step
+navigation dock and timeline. Expand **Why this move?** for detailed reasoning;
+the controls remain accessible while reading. Returning to editing restores the
+puzzle-entry actions. Desktop reasoning stays expanded beside the board.

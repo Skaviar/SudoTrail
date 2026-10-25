@@ -56,7 +56,7 @@ function message(text, kind = '') {
 }
 function puzzleString() { return original.map(value => value || '.').join(''); }
 function updateControls() {
-  for (const id of ['random', 'validate', 'solve', 'clear', 'edit']) $(id).disabled = busy;
+  for (const id of ['random', 'validate', 'solve', 'clear', 'edit', 'import-photo']) $(id).disabled = busy;
   $('validate').disabled = busy || states.length > 0;
   $('solve').disabled = busy || states.length > 0 || !original.some(Boolean);
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
@@ -68,6 +68,11 @@ function updateControls() {
 }
 function render() {
   const state = states[current];
+  const enteringPlayback = !!state && !document.body.classList.contains('reviewing-steps');
+  document.body.classList.toggle('reviewing-steps', !!state);
+  if (enteringPlayback && window.matchMedia('(max-width: 800px)').matches) {
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  }
   const step = state?.step;
   const removed = new Set((step?.eliminations || []).map(e => `${e.row},${e.col},${e.number}`));
   for (let index = 0; index < 81; index++) {
@@ -264,3 +269,22 @@ function renderVisuals(state, step) {
   $('visual-summary').textContent = text.join(' · ');
   $('visual-summary').hidden = !text.length;
 }
+
+// Photo import supplies reviewed clues; correction and solving use the normal board.
+document.addEventListener('godoku:photo-import', event => {
+  if (busy) return;
+  original = [...event.detail.values];
+  givenClues = [...original];
+  states = []; current = 0; puzzleLabel = 'Puzzle from your photo';
+  showIssues([]);
+  message('Photo imported. You can still edit any clue. Validate before solving.');
+  render();
+});
+
+// On phones, keep the explanation compact while navigation remains in reach.
+const mobileLayout = window.matchMedia('(max-width: 800px)');
+function configureExplanation() {
+  $('reasoning-details').open = !mobileLayout.matches;
+}
+mobileLayout.addEventListener('change', configureExplanation);
+configureExplanation();
