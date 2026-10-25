@@ -48,6 +48,13 @@ func NewSolverHistory(s *Sudoku) *SolverHistory {
 // RecordStep stores the state after a step has been applied.
 // The first entry is the original puzzle; subsequent entries follow solving order.
 func (h *SolverHistory) RecordStep(s *Sudoku, step Step) {
+	if step.Visual != nil {
+		visual := *step.Visual
+		visual.Sources = append([]Cell(nil), visual.Sources...)
+		visual.Digits = append([]int(nil), visual.Digits...)
+		visual.Units = append([]VisualUnit(nil), visual.Units...)
+		step.Visual = &visual
+	}
 	step.Details = append([]string(nil), step.Details...)
 
 	// Copy the slice so the history doesn't share its backing array.

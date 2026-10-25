@@ -8,13 +8,14 @@ type CandidateElimination struct {
 }
 
 type Step struct {
-	Technique        string   `json:"technique"`
-	Explanation      string   `json:"explanation"`
-	Details          []string `json:"details"`
-	Row              int      `json:"row"`
-	Col              int      `json:"col"`
-	Number           int      `json:"number"`
-	BeforeCandidates uint16   `json:"beforeCandidates"`
+	Visual           *StepVisual `json:"visual,omitempty"`
+	Technique        string      `json:"technique"`
+	Explanation      string      `json:"explanation"`
+	Details          []string    `json:"details"`
+	Row              int         `json:"row"`
+	Col              int         `json:"col"`
+	Number           int         `json:"number"`
+	BeforeCandidates uint16      `json:"beforeCandidates"`
 
 	// Populated by candidate-elimination techniques.
 	Eliminations []CandidateElimination `json:"eliminations"`

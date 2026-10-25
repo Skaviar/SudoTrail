@@ -60,6 +60,7 @@ func ApplyPointing(s *Sudoku) (Step, bool) {
 
 						eliminations := removeCandidates(s, targets, number)
 						return Step{
+							Visual:       intersectionVisual(cells, number),
 							Technique:    "Locked Candidates — Pointing",
 							Explanation:  fmt.Sprintf("In Box %d, candidate %d is locked to Row %d.", box, number, row+1),
 							Details:      details,
@@ -92,6 +93,7 @@ func ApplyPointing(s *Sudoku) (Step, bool) {
 
 						eliminations := removeCandidates(s, targets, number)
 						return Step{
+							Visual:       intersectionVisual(cells, number),
 							Technique:    "Locked Candidates — Pointing",
 							Explanation:  fmt.Sprintf("In Box %d, candidate %d is locked to Column %d.", box, number, col+1),
 							Details:      details,
@@ -161,6 +163,7 @@ func ApplyClaiming(s *Sudoku) (Step, bool) {
 			}
 
 			return Step{
+				Visual:       intersectionVisual(cells, number),
 				Technique:    "Locked Candidates — Claiming",
 				Explanation:  fmt.Sprintf("In Row %d, candidate %d is confined to Box %d.", row+1, number, box),
 				Details:      details,
@@ -221,6 +224,7 @@ func ApplyClaiming(s *Sudoku) (Step, bool) {
 			}
 
 			return Step{
+				Visual:       intersectionVisual(cells, number),
 				Technique:    "Locked Candidates — Claiming",
 				Explanation:  fmt.Sprintf("In Column %d, candidate %d is confined to Box %d.", col+1, number, box),
 				Details:      details,

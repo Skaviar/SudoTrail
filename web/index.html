@@ -12,8 +12,9 @@
 <div class="workspace">
 <section class="board-panel" aria-label="Sudoku workspace">
 <div class="panel-heading"><div><span id="mode" class="tag">YOUR PUZZLE</span><h2 id="board-title">Start with a blank slate</h2></div><button id="random" class="button secondary">↻ &nbsp; Random puzzle</button></div>
-<div id="board" class="board" role="group" aria-label="Editable Sudoku board"></div>
-<div class="board-options"><span id="board-hint">Select any cell · Type 1–9 · Delete to clear</span><label><input id="candidates" type="checkbox" checked> Candidates</label></div>
+<div class="board-wrap"><div id="board" class="board" role="group" aria-label="Editable Sudoku board"></div><svg id="deduction-overlay" class="deduction-overlay" aria-hidden="true"></svg></div>
+<p id="visual-summary" class="visual-summary" hidden></p>
+<div class="board-options"><span id="board-hint">Select any cell · Type 1–9 · Delete to clear</span><label><input id="visuals" type="checkbox" checked> Guides</label><label><input id="candidates" type="checkbox" checked> Candidates</label></div>
 <div class="board-actions"><button id="clear" class="button quiet">Clear board</button><div><button id="validate" class="button secondary">Validate</button><button id="solve" class="button primary">Solve step by step <span aria-hidden="true">→</span></button></div></div>
 <p id="message" class="message" role="status" aria-live="polite">An empty board, endless possibilities. Add your clues to begin.</p>
 <ul id="issues" class="issues" aria-label="Validation issues" hidden></ul>
@@ -23,7 +24,7 @@
 <div id="empty-explanation" class="empty-explanation"><div class="logic-icon" aria-hidden="true">✧</div><h2>Every number has a reason.</h2><p>Enter your clues and solve to see the technique, the reasoning, and the result of each move.</p><ol class="getting-started"><li><span>01</span> Fill any cells with your clues</li><li><span>02</span> Validate to check for conflicts</li><li><span>03</span> Explore the solution, step by step</li></ol></div>
 <div id="explanation" hidden><span id="technique" class="technique"></span><h2 id="step-title"></h2><ul id="details" class="details"></ul></div>
 <div class="playback"><div class="navigation"><button id="first" class="nav-button" aria-label="First state" disabled>⇤</button><button id="previous" class="nav-button" aria-label="Previous step" disabled>←</button><span id="position">— / —</span><button id="next" class="nav-button" aria-label="Next step" disabled>→</button><button id="last" class="nav-button" aria-label="Last state" disabled>⇥</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Solving step" disabled><button id="edit" class="button secondary edit-button" hidden>Edit original puzzle</button></div>
-<div class="legend"><span><i class="legend-clue"></i> Your clue</span><span><i class="legend-new"></i> New placement</span><span><i class="legend-removed"></i> Removed candidate</span></div>
+<div class="legend"><span><i class="legend-source"></i> Evidence</span><span><i class="legend-unit"></i> Focus unit</span><span><i class="legend-new"></i> New placement</span><span><i class="legend-removed"></i> Removed candidate</span></div>
 </aside>
 </div>
 <footer>Built on logic, not guesswork.<span>Go-powered Sudoku · Human-readable reasoning</span></footer>

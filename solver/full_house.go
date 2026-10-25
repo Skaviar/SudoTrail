@@ -23,6 +23,7 @@ func ApplyFullHouse(s *Sudoku) (Step, bool) {
 		}
 		s.Place(empty.Row, empty.Col, number)
 		return Step{
+			Visual:      &StepVisual{Sources: []Cell{empty}, Digits: []int{number}, Units: []VisualUnit{describeUnit(unit)}},
 			Technique:   "Full House",
 			Explanation: fmt.Sprintf("%s has only one empty cell, so its value is forced.", unit.name),
 			Details: []string{

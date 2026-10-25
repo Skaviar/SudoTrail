@@ -20,6 +20,7 @@ func ApplyHiddenSingle(s *Sudoku) (Step, bool) {
 			details := explainHiddenSingle(s, unit, target, number)
 			s.Place(target.Row, target.Col, number)
 			return Step{
+				Visual:      &StepVisual{Sources: []Cell{target}, Digits: []int{number}, Units: []VisualUnit{describeUnit(unit)}},
 				Technique:   "Hidden Single",
 				Explanation: fmt.Sprintf("In %s, number %d has only one possible location.", unit.name, number),
 				Details:     details, Row: target.Row, Col: target.Col, Number: number,

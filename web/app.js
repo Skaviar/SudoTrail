@@ -4,6 +4,9 @@ const $ = id => document.getElementById(id);
 const board = $('board');
 const cells = [];
 let original = Array(81).fill(0);
+// Preserve puzzle provenance separately from the editable submission.
+// null means a custom puzzle is still being entered.
+let givenClues = null;
 let states = [];
 let current = 0;
 let busy = false;
@@ -74,7 +77,7 @@ function render() {
     input.value = value || '';
     input.setAttribute('aria-invalid', String(conflicts.has(index)));
     const placed = step?.number > 0 && step.row === row && step.col === col;
-    cell.className = ['cell', original[index] ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
+    cell.className = ['cell', value && (givenClues ? givenClues[index] === value : original[index] === value) ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
     marks.replaceChildren();
     if (state && !value && $('candidates').checked) {
       for (let digit = 1; digit <= 9; digit++) {
@@ -82,6 +85,7 @@ function render() {
         const eliminated = removed.has(`${row},${col},${digit}`);
         if ((state.candidates[row][col] & (1 << digit)) || eliminated) mark.textContent = digit;
         if (eliminated) mark.className = 'removed';
+        mark.dataset.digit = digit;
         marks.append(mark);
       }
     }
@@ -105,6 +109,7 @@ function render() {
       const item = document.createElement('li'); item.textContent = text; $('details').append(item);
     }
   }
+  renderVisuals(state, step);
   updateControls();
 }
 async function api(path, puzzle) {
@@ -140,18 +145,20 @@ $('validate').addEventListener('click', () => perform(async () => {
 }));
 $('solve').addEventListener('click', () => perform(async () => {
   const result = await api('/api/solve', puzzleString());
+  if (givenClues === null) givenClues = [...original];
   showIssues([]); states = result.states; current = 0;
   message(result.solved ? 'Solution found. Explore each deduction with the step controls.' : 'The solver reached its current technique limit. Explore the available steps; this does not mean the puzzle is unsolvable.', result.solved ? 'success' : '');
 }));
 $('random').addEventListener('click', () => perform(async () => {
   const result = await api('/api/puzzles/random');
   original = [...result.puzzle].map(ch => /[1-9]/.test(ch) ? Number(ch) : 0);
+  givenClues = [...original];
   states = []; current = 0; showIssues([]);
   puzzleLabel = `Puzzle #${result.id}${result.difficulty ? ` · Difficulty ${result.difficulty}` : ''}`;
   message('A fresh puzzle is ready. Validate it, make changes, or explore its solution.');
 }));
 $('clear').addEventListener('click', () => {
-  original = Array(81).fill(0); states = []; current = 0; puzzleLabel = ''; showIssues([]);
+  original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
   message('An empty board, endless possibilities. Add your clues to begin.'); render(); cells[0].input.focus();
 });
 $('edit').addEventListener('click', () => { states = []; current = 0; showIssues([]); message('Your original clues are restored. Select any cell to edit.'); render(); });
@@ -162,4 +169,98 @@ $('next').addEventListener('click', () => navigate(current + 1));
 $('last').addEventListener('click', () => navigate(states.length - 1));
 $('timeline').addEventListener('input', event => navigate(Number(event.target.value)));
 $('candidates').addEventListener('change', render);
+$('visuals').addEventListener('change', render);
+new ResizeObserver(() => renderVisuals(states[current], states[current]?.step)).observe(board);
 render();
+
+// Read structured evidence from Go; placement propagation is a candidate-state diff.
+function visualData(state, step) {
+  if (!step) return { sources: [], digits: [], units: [], targets: [] };
+  const visual = step.visual || {};
+  const sources = visual.sources || (step.number > 0 ? [{ row: step.row, col: step.col }] : []);
+  const targets = [...(step.eliminations || [])];
+  const previous = states[current - 1];
+  if (step.number > 0 && previous) {
+    for (let row = 0; row < 9; row++) for (let col = 0; col < 9; col++) {
+      if (!state.board[row][col] && (previous.candidates[row][col] & (1 << step.number)) && !(state.candidates[row][col] & (1 << step.number))) {
+        targets.push({ row, col, number: step.number });
+      }
+    }
+  }
+  return { sources, digits: visual.digits || [step.number].filter(Boolean), units: visual.units || [], targets };
+}
+function renderVisuals(state, step) {
+  const overlay = $('deduction-overlay');
+  overlay.replaceChildren();
+  for (const { cell, marks } of cells) {
+    cell.classList.remove('focus-unit', 'source-cell', 'target-cell');
+    for (const mark of marks.children) mark.classList.remove('evidence');
+    // Remove propagation marks from a previous resize/render.
+    for (const mark of marks.querySelectorAll('[data-propagated]')) { mark.textContent = ''; mark.classList.remove('removed'); delete mark.dataset.propagated; }
+  }
+  $('visual-summary').hidden = true;
+  if (!state || !step || !$('visuals').checked) return;
+  const { sources, digits, units, targets } = visualData(state, step);
+  const bounds = board.getBoundingClientRect();
+  overlay.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
+  const svg = (tag, attributes) => {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+    overlay.append(element); return element;
+  };
+  const cellAt = p => cells[p.row * 9 + p.col];
+  const point = (p, digit) => {
+    const entry = cellAt(p);
+    const mark = $('candidates').checked && !state.board[p.row][p.col] && digit ? entry.marks.querySelector(`[data-digit="${digit}"]`) : null;
+    const rect = (mark || entry.cell).getBoundingClientRect();
+    return { x: rect.left - bounds.left + rect.width / 2, y: rect.top - bounds.top + rect.height / 2 };
+  };
+  for (const unit of units) {
+    const members = [];
+    for (let row = 0; row < 9; row++) for (let col = 0; col < 9; col++) {
+      if ((unit.kind === 'row' && row === unit.index) || (unit.kind === 'column' && col === unit.index) || (unit.kind === 'box' && Math.floor(row / 3) * 3 + Math.floor(col / 3) === unit.index)) members.push({ row, col });
+    }
+    if (!members.length) continue;
+    for (const member of members) cellAt(member).cell.classList.add('focus-unit');
+    const start = cellAt(members[0]).cell.getBoundingClientRect(), end = cellAt(members.at(-1)).cell.getBoundingClientRect();
+    svg('rect', { x: start.left - bounds.left + 3, y: start.top - bounds.top + 3, width: end.right - start.left - 6, height: end.bottom - start.top - 6, rx: 5, class: 'guide-unit' });
+  }
+  for (const source of sources) {
+    const entry = cellAt(source); entry.cell.classList.add('source-cell');
+    for (const digit of digits) {
+      const mark = entry.marks.querySelector(`[data-digit="${digit}"]`);
+      if (mark?.textContent && !mark.classList.contains('removed')) mark.classList.add('evidence');
+    }
+  }
+  // Locked candidates get one clear axis through their source cells.
+  if (sources.length > 1 && digits.length === 1) {
+    const points = sources.map(source => point(source, digits[0]));
+    if (sources.every(p => p.row === sources[0].row) || sources.every(p => p.col === sources[0].col)) {
+      const a = points[0], b = points.at(-1);
+      svg('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'guide-axis' });
+    }
+  }
+  for (const target of targets) {
+    const entry = cellAt(target); entry.cell.classList.add('target-cell');
+    const mark = entry.marks.querySelector(`[data-digit="${target.number}"]`);
+    if (mark && !mark.textContent) { mark.textContent = target.number; mark.classList.add('removed'); mark.dataset.propagated = 'true'; }
+    const end = point(target, target.number);
+    const sameCell = sources.some(source => source.row === target.row && source.col === target.col);
+    if (!sameCell && sources.length) {
+      // One nearest source per target avoids a web of crossing connections.
+      const candidates = sources.map(source => point(source, target.number));
+      const start = candidates.reduce((a, b) => Math.hypot(a.x - end.x, a.y - end.y) < Math.hypot(b.x - end.x, b.y - end.y) ? a : b);
+      svg('line', { x1: start.x, y1: start.y, x2: end.x, y2: end.y, class: 'guide-link' });
+    }
+    const radius = $('candidates').checked ? Math.max(5, bounds.width / 70) : bounds.width / 34;
+    svg('circle', { cx: end.x, cy: end.y, r: radius, class: 'guide-ring' });
+    if (!$('candidates').checked) svg('path', { d: `M${end.x - 4},${end.y - 4}l8,8m0,-8l-8,8`, class: 'guide-cross' });
+  }
+  const unitNames = units.map(u => `${u.kind === 'column' ? 'Column' : u.kind === 'box' ? 'Box' : 'Row'} ${u.index + 1}`);
+  const text = [];
+  if (unitNames.length) text.push(unitNames.join(' + '));
+  if (sources.length) text.push(`${sources.length} evidence ${sources.length === 1 ? 'cell' : 'cells'}`);
+  if (targets.length) text.push(`${targets.length} candidate${targets.length === 1 ? '' : 's'} removed${step.number > 0 ? ' from peers' : ''}`);
+  $('visual-summary').textContent = text.join(' · ');
+  $('visual-summary').hidden = !text.length;
+}

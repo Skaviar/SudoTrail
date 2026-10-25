@@ -122,6 +122,7 @@ func ApplyHiddenSubset(s *Sudoku, size int) (Step, bool) {
 			}
 
 			return Step{
+				Visual:       &StepVisual{Sources: subsetCells, Digits: candidateList(digitMask), Units: []VisualUnit{describeUnit(unit)}},
 				Technique:    technique,
 				Explanation:  fmt.Sprintf("%s found in %s.", technique, unit.name),
 				Details:      details,

@@ -134,3 +134,18 @@ string. Unexpected fields are rejected. General API errors use `{"error":"..."}`
 HTTP routing returns 404 for unknown paths and 405 for unsupported methods.
 Implementation: `cmd/web/main.go` starts the server; `internal/webapi` contains
 handlers and database access; `solver/validation.go` shares validation with the CLI.
+
+### Visual deduction guides
+
+The Guides checkbox controls highlighted evidence cells, dashed outlines around
+focus rows/columns/boxes, and connections to eliminated candidates. Teal marks
+identify evidence; coral rings and crossed-out digits identify removals. Hidden
+subsets highlight their reserved digits and the other candidates removed from
+those same cells. Placements show candidate removals in peer cells by comparing
+adjacent history snapshots. With candidates hidden, rings and crosses still mark
+target cells. The SVG overlay resizes with the board.
+
+Steps may include `visual` with `sources` (cell coordinates), `digits` (the digits
+supporting the deduction), and `units` (`kind`: `row`, `column`, or `box`, plus a
+zero-based `index`). These fields are recorded by the techniques themselves;
+the UI does not infer evidence from explanation strings.

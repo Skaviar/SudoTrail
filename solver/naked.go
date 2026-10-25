@@ -33,6 +33,7 @@ func ApplyNakedSingle(s *Sudoku) (Step, bool) {
 			s.Place(row, col, number)
 
 			return Step{
+				Visual:           &StepVisual{Sources: []Cell{{Row: row, Col: col}}, Digits: []int{number}},
 				Technique:        "Naked Single",
 				Explanation:      fmt.Sprintf("R%dC%d has only one possible candidate.", row+1, col+1),
 				Details:          details,
