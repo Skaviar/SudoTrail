@@ -14,7 +14,14 @@ import (
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8080", "HTTP listen address")
 	database := flag.String("database", "sudoku-3m.csv", "puzzle CSV path")
+	static := flag.String("static", "", "serve a built static WASM directory instead of the Go API")
 	flag.Parse()
+	if *static != "" {
+		log.Printf("Godoku static site listening on http://%s", *addr)
+		server := &http.Server{Addr: *addr, Handler: http.FileServer(http.Dir(*static)), ReadHeaderTimeout: 5 * time.Second}
+		log.Fatal(server.ListenAndServe())
+		return
+	}
 	var random func() (webapi.RandomPuzzle, error)
 	catalog, err := webapi.OpenCatalog(*database)
 	if err != nil {

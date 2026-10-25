@@ -118,6 +118,15 @@ function render() {
   updateControls();
 }
 async function api(path, puzzle) {
+  if (window.godokuEngine) {
+    const response = await window.godokuEngine.request(path, puzzle);
+    const data = response.body;
+    if (response.status >= 400) {
+      if (data.issues) showIssues(data.issues);
+      throw new Error(data.error || data.issues?.[0]?.message || 'The browser solver could not process this puzzle.');
+    }
+    return data;
+  }
   const response = await fetch(path, puzzle === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ puzzle })
   });

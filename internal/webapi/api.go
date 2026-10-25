@@ -5,26 +5,16 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/s-threepio/godoku/internal/puzzleapp"
 	"github.com/s-threepio/godoku/solver"
 )
 
 type puzzleRequest struct {
 	Puzzle string `json:"puzzle"`
 }
-type validationResponse struct {
-	Valid  bool                     `json:"valid"`
-	Issues []solver.ValidationIssue `json:"issues"`
-}
-type stateResponse struct {
-	Board      [9][9]int8   `json:"board"`
-	Candidates [9][9]uint16 `json:"candidates"`
-	Step       *solver.Step `json:"step"`
-}
-type solveResponse struct {
-	Solved bool            `json:"solved"`
-	Status string          `json:"status"`
-	States []stateResponse `json:"states"`
-}
+type validationResponse = puzzleapp.ValidationResponse
+type stateResponse = puzzleapp.StateResponse
+type solveResponse = puzzleapp.SolveResponse
 
 // NewHandler exposes only puzzle APIs; benchmark execution belongs to the CLI.
 // A nil random source leaves manual validation and solving available.
@@ -47,23 +37,10 @@ func NewHandler(random func() (RandomPuzzle, error)) http.Handler {
 			writeJSON(w, http.StatusBadRequest, validationResponse{Valid: false, Issues: issues})
 			return
 		}
-		s, err := solver.NewSudoku(solver.Puzzle{Puzzle: request.Puzzle})
+		response, err := puzzleapp.Solve(request.Puzzle)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
-		}
-		history := s.Solve()
-		response := solveResponse{Solved: s.IsSolved(), Status: "stuck", States: make([]stateResponse, 0, history.Len())}
-		if response.Solved {
-			response.Status = "solved"
-		}
-		for _, entry := range history.Entries {
-			state := stateResponse{Board: entry.State.Board, Candidates: entry.State.Candidates}
-			if entry.HasStep {
-				step := entry.Step
-				state.Step = &step
-			}
-			response.States = append(response.States, state)
 		}
 		writeJSON(w, http.StatusOK, response)
 	})
