@@ -26,7 +26,7 @@ for (let index = 0; index < 81; index++) {
     original[index] = digits ? Number(digits.at(-1)) : 0;
     conflicts.clear();
     $('issues').hidden = true;
-    message('Clues updated. Validate to check for conflicts.');
+    message('');
     render();
   });
   input.addEventListener('keydown', event => {
@@ -62,7 +62,7 @@ function updateControls() {
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
-  $('solve').textContent = busy ? 'Working…' : 'Solve step by step →';
+  $('solve').textContent = busy ? 'Working…' : 'Solve';
   for (const { input } of cells) input.readOnly = busy || states.length > 0;
   board.setAttribute('aria-busy', String(busy));
 }
@@ -70,6 +70,7 @@ function render() {
   const state = states[current];
   const enteringPlayback = !!state && !document.body.classList.contains('reviewing-steps');
   document.body.classList.toggle('reviewing-steps', !!state);
+  document.body.classList.toggle('puzzle-loaded', !!state || original.some(Boolean));
   if (enteringPlayback && window.matchMedia('(max-width: 800px)').matches) {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }
@@ -98,18 +99,17 @@ function render() {
   $('empty-explanation').hidden = !!state;
   $('explanation').hidden = !state;
   $('edit').hidden = !state;
-  $('mode').textContent = state ? 'FOLLOW THE LOGIC' : 'YOUR PUZZLE';
-  $('board-title').textContent = state ? 'One deduction at a time' : puzzleLabel || 'Start with a blank slate';
+  $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Your puzzle';
   $('board-hint').textContent = state ? 'Use the arrows or slider to explore each step' : 'Select any cell · Type 1–9 · Delete to clear';
-  $('step-count').textContent = state ? `${states.length - 1} deductions recorded` : 'Ready when you are';
+  $('step-count').textContent = state ? `${states.length - 1} steps` : '';
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
   $('timeline').max = Math.max(0, states.length - 1);
   $('timeline').value = current;
   $('details').replaceChildren();
   if (state) {
     $('technique').textContent = step?.technique || 'Initial puzzle';
-    $('step-title').textContent = step?.explanation || 'It all starts with your clues.';
-    const details = step?.details || ['This is the board before any deductions. Move forward to see the first logical step.'];
+    $('step-title').textContent = step?.explanation || 'Original puzzle';
+    const details = step?.details || ['Use Next to see the first move.'];
     for (const text of details) {
       const item = document.createElement('li'); item.textContent = text; $('details').append(item);
     }
@@ -155,13 +155,13 @@ function showIssues(issues) {
 $('validate').addEventListener('click', () => perform(async () => {
   const result = await api('/api/validate', puzzleString());
   showIssues(result.issues);
-  message(result.valid ? 'No conflicts found. This checks the clues, not whether there is a unique solution.' : 'There are conflicts to resolve. Check the highlighted cells below.', result.valid ? 'success' : 'error');
+  message(result.valid ? 'No conflicts found.' : 'Fix the highlighted cells.', result.valid ? 'success' : 'error');
 }));
 $('solve').addEventListener('click', () => perform(async () => {
   const result = await api('/api/solve', puzzleString());
   if (givenClues === null) givenClues = [...original];
   showIssues([]); states = result.states; current = 0;
-  message(result.solved ? 'Solution found. Explore each deduction with the step controls.' : 'The solver reached its current technique limit. Explore the available steps; this does not mean the puzzle is unsolvable.', result.solved ? 'success' : '');
+  message(result.solved ? 'Solution found.' : 'Stopped: no more supported moves.', result.solved ? 'success' : '');
 }));
 $('random').addEventListener('click', () => perform(async () => {
   const result = await api('/api/puzzles/random');
@@ -169,13 +169,13 @@ $('random').addEventListener('click', () => perform(async () => {
   givenClues = [...original];
   states = []; current = 0; showIssues([]);
   puzzleLabel = `Puzzle #${result.id}${result.difficulty ? ` · Difficulty ${result.difficulty}` : ''}`;
-  message('A fresh puzzle is ready. Validate it, make changes, or explore its solution.');
+  message('');
 }));
 $('clear').addEventListener('click', () => {
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
-  message('An empty board, endless possibilities. Add your clues to begin.'); render(); cells[0].input.focus();
+  message(''); render(); cells[0].input.focus();
 });
-$('edit').addEventListener('click', () => { states = []; current = 0; showIssues([]); message('Your original clues are restored. Select any cell to edit.'); render(); });
+$('edit').addEventListener('click', () => { states = []; current = 0; showIssues([]); message(''); render(); });
 function navigate(index) { current = Math.max(0, Math.min(states.length - 1, index)); render(); }
 $('first').addEventListener('click', () => navigate(0));
 $('previous').addEventListener('click', () => navigate(current - 1));
@@ -273,7 +273,6 @@ function renderVisuals(state, step) {
   const unitNames = units.map(u => `${u.kind === 'column' ? 'Column' : u.kind === 'box' ? 'Box' : 'Row'} ${u.index + 1}`);
   const text = [];
   if (unitNames.length) text.push(unitNames.join(' + '));
-  if (sources.length) text.push(`${sources.length} evidence ${sources.length === 1 ? 'cell' : 'cells'}`);
   if (targets.length) text.push(`${targets.length} candidate${targets.length === 1 ? '' : 's'} removed${step.number > 0 ? ' from peers' : ''}`);
   $('visual-summary').textContent = text.join(' · ');
   $('visual-summary').hidden = !text.length;
@@ -286,14 +285,36 @@ document.addEventListener('godoku:photo-import', event => {
   givenClues = [...original];
   states = []; current = 0; puzzleLabel = 'Puzzle from your photo';
   showIssues([]);
-  message('Photo imported. You can still edit any clue. Validate before solving.');
+  message('Photo imported. Check the clues, then validate.');
   render();
 });
 
 // On phones, keep the explanation compact while navigation remains in reach.
 const mobileLayout = window.matchMedia('(max-width: 800px)');
 function configureExplanation() {
-  $('reasoning-details').open = !mobileLayout.matches;
+  $('reasoning-details').open = false;
 }
 mobileLayout.addEventListener('change', configureExplanation);
 configureExplanation();
+
+// Fit the entire board inside its available slot, including browser-toolbar and
+// dock size changes. The hint lives inside the optional reasoning details.
+const boardStage = document.querySelector('.board-stage');
+function fitBoard() {
+  const compact = window.matchMedia('(max-width: 800px)').matches;
+  const reviewing = document.body.classList.contains('reviewing-steps');
+  if (compact && reviewing) {
+    const size = Math.floor(Math.min(boardStage.clientWidth, boardStage.clientHeight));
+    boardStage.style.setProperty('--board-space', `${Math.max(0, size)}px`);
+  } else boardStage.style.removeProperty('--board-space');
+}
+const layoutObserver = new ResizeObserver(entries => {
+  const dock = document.querySelector('.playback');
+  if (entries.some(entry => entry.target === dock)) {
+    document.documentElement.style.setProperty('--dock-height', `${Math.ceil(dock.getBoundingClientRect().height)}px`);
+  }
+  fitBoard();
+});
+layoutObserver.observe(boardStage);
+layoutObserver.observe(document.querySelector('.playback'));
+window.visualViewport?.addEventListener('resize', fitBoard);

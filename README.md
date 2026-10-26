@@ -250,7 +250,9 @@ The file picker accepts browser-supported images up to 20 MB; use JPEG/PNG/WebP
 if a phone-specific format cannot be decoded. Closing the dialog cancels an
 active recognition job without replacing the current puzzle.
 
-On phones, solving uses a compact board-first layout with a fixed bottom step
-navigation dock and timeline. Expand **Why this move?** for detailed reasoning;
-the controls remain accessible while reading. Returning to editing restores the
-puzzle-entry actions. Desktop reasoning stays expanded beside the board.
+Solving uses a compact, single-row bottom navigation rail with previous/next, timeline, and Edit. On phones the first/last buttons are omitted; the timeline can jump to either end.
+On phones, the board fits the available viewport above the dock, and the last
+row remains visible when details expand. The elimination summary is inside
+**Why this move?**, alongside detailed reasoning; that section scrolls separately
+when needed, without moving the navigation controls. Returning to editing restores the
+puzzle-entry actions. Detailed reasoning is collapsed by default. Color meanings appear beside the step count. The Godoku title bar disappears once the board contains a puzzle and returns when the board is cleared. Puzzle actions, photo import, and board settings share one horizontal toolbar above the grid; on narrow screens the toolbar scrolls sideways instead of wrapping.
