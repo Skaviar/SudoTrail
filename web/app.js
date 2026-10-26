@@ -10,6 +10,7 @@ let givenClues = null;
 let states = [];
 let current = 0;
 let busy = false;
+let solvePending = false;
 let conflicts = new Set();
 let puzzleLabel = '';
 
@@ -56,6 +57,7 @@ function message(text, kind = '') {
 }
 function puzzleString() { return original.map(value => value || '.').join(''); }
 function updateControls() {
+  $('validate').hidden = $('solve').hidden = solvePending || states.length > 0;
   for (const id of ['random', 'validate', 'solve', 'clear', 'edit', 'import-photo']) $(id).disabled = busy;
   $('validate').disabled = busy || states.length > 0;
   $('solve').disabled = busy || states.length > 0 || !original.some(Boolean);
@@ -70,7 +72,10 @@ function render() {
   const state = states[current];
   const enteringPlayback = !!state && !document.body.classList.contains('reviewing-steps');
   document.body.classList.toggle('reviewing-steps', !!state);
-  document.body.classList.toggle('puzzle-loaded', !!state || original.some(Boolean));
+  const loaded = !!state || givenClues !== null || original.some(Boolean);
+  document.body.classList.toggle('puzzle-loaded', loaded);
+  $('guides-option').hidden = $('candidates-option').hidden = !loaded;
+  $('random').hidden = $('import-photo').hidden = loaded;
   if (enteringPlayback && window.matchMedia('(max-width: 800px)').matches) {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }
@@ -99,8 +104,9 @@ function render() {
   $('empty-explanation').hidden = !!state;
   $('explanation').hidden = !state;
   $('edit').hidden = !state;
-  $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Your puzzle';
-  $('board-hint').textContent = state ? 'Use the arrows or slider to explore each step' : 'Select any cell · Type 1–9 · Delete to clear';
+  $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Enter a puzzle';
+  $('board-hint').hidden = !!state || givenClues !== null;
+  $('board-hint').textContent = 'Tap any cell to enter 1–9. Fill the clues in any order.';
   $('step-count').textContent = state ? `${states.length - 1} steps` : '';
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
   $('timeline').max = Math.max(0, states.length - 1);
@@ -137,12 +143,12 @@ async function api(path, puzzle) {
   }
   return data;
 }
-async function perform(action) {
+async function perform(action, isSolve = false) {
   if (busy) return;
-  busy = true; updateControls();
+  busy = true; solvePending = isSolve; updateControls();
   try { await action(); }
   catch (error) { message(error.message || 'Could not reach the server. Please try again.', 'error'); }
-  finally { busy = false; render(); }
+  finally { busy = false; solvePending = false; render(); }
 }
 function showIssues(issues) {
   conflicts.clear(); $('issues').replaceChildren();
@@ -161,8 +167,8 @@ $('solve').addEventListener('click', () => perform(async () => {
   const result = await api('/api/solve', puzzleString());
   if (givenClues === null) givenClues = [...original];
   showIssues([]); states = result.states; current = 0;
-  message(result.solved ? 'Solution found.' : 'Stopped: no more supported moves.', result.solved ? 'success' : '');
-}));
+  message(result.solved ? '' : 'Stopped: no more supported moves.');
+}, true));
 $('random').addEventListener('click', () => perform(async () => {
   const result = await api('/api/puzzles/random');
   original = [...result.puzzle].map(ch => /[1-9]/.test(ch) ? Number(ch) : 0);

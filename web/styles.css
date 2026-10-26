@@ -31,6 +31,7 @@ main { max-width: 1040px; margin: 0 auto; padding: 12px 16px; }
 .workspace:has(#explanation[hidden]) { grid-template-columns: minmax(0, 1fr); max-width: 580px; margin: 0 auto; }
 .board-panel, .reasoning-panel { min-width: 0; padding: 12px; background: white; border: 1px solid var(--line); border-radius: 8px; }
 .reasoning-panel:has(#explanation[hidden]) { display: none; }
+.entry-hint { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .board-title { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
 .reviewing-steps .board-title { display: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
@@ -45,6 +46,8 @@ h2 { margin: 0; }
 .quiet { background: none; color: var(--muted); }
 .board-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; white-space: nowrap; margin-bottom: 8px; padding: 0 0 4px; scrollbar-width: thin; scrollbar-color: #bdcabb transparent; }
 .board-toolbar > * { flex: none; }
+.toolbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.toolbar-actions .button { flex: 0 0 auto; width: max-content; margin: 0; }
 .board-toolbar .button { padding: 5px 8px; font-size: 11px; min-height: 30px; }
 .board-toolbar label { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; min-height: 30px; cursor: pointer; }
 .board-toolbar input { margin: 0; accent-color: var(--green); width: 12px; height: 12px; }
@@ -130,7 +133,7 @@ h2 { margin: 0; }
   .reviewing-steps .board-panel { align-self: stretch; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; overflow: hidden; padding: 0; border: 0; background: transparent; }
   .reviewing-steps .board-toolbar { margin-bottom: 4px; min-height: 24px; }
   .reviewing-steps .board-toolbar label { min-height: 24px; font-size: 10px; }
-  .reviewing-steps .board-toolbar :is(#random,#import-photo,#clear,#validate,#solve) { display: none; }
+  .reviewing-steps .board-toolbar :is(#random,#import-photo,#validate,#solve) { display: none; }
   .reviewing-steps :is(#message,#issues) { display: none; }
   .reviewing-steps .board-stage { display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
   .reviewing-steps .board-wrap { width: var(--board-space,100%); max-width: 100%; flex: none; }

@@ -5,6 +5,37 @@ A Go Sudoku solver that explains one logical move at a time.
 Run the terminal app with `go run .`. Keep `sudoku-3m.csv` in the project
 root for database puzzles. Use `go test ./...` to run the tests.
 
+## Quick commands
+
+Run `make` to list the available commands. Go remains the only build dependency;
+`make` provides shortcuts for the existing commands.
+
+| Command | What it does |
+| --- | --- |
+| `make dev` | Rebuild WASM and serve the static website at http://127.0.0.1:8080 |
+| `make build` | Generate `dist/` for Cloudflare deployment |
+| `make preview` | Same as `make dev`; always rebuilds before serving |
+| `make web` | Run the local Go HTTP API and website |
+| `make run` | Run the terminal app and its benchmark menu |
+| `make check` | Run tests and `go vet` |
+| `make race` | Run tests with the race detector |
+| `make fmt` | Format Go source |
+
+Press Ctrl+C to stop a running app. Restart `make dev` after source changes;
+it does not watch files automatically.
+
+Override settings when needed:
+
+```sh
+make dev ADDR=127.0.0.1:9090
+make web ADDR=0.0.0.0:8080
+make web DATABASE=/path/to/puzzles.csv
+make build DIST=dist
+```
+
+For Cloudflare Git integration, the build command can be `make build`, with
+output directory `dist`. The existing `go run ./cmd/buildweb` command also works.
+
 ## Static Go WebAssembly build (Cloudflare Pages)
 
 The website can run entirely in the browser: the Go solver compiles to

@@ -10,17 +10,19 @@
 <main>
 <div class="workspace">
 <section class="board-panel" aria-label="Sudoku workspace">
-<h2 id="board-title" class="board-title">Your puzzle</h2>
+<h2 id="board-title" class="board-title">Enter a puzzle</h2>
 <div class="board-toolbar" role="group" aria-label="Puzzle controls">
 <button id="random" class="button secondary" title="Load a random puzzle">↻ Random</button>
 <button id="import-photo" class="button secondary" aria-label="Import a photo">▧ Photo</button>
-<label><input id="visuals" type="checkbox" checked> Guides</label>
-<label><input id="candidates" type="checkbox" checked> Candidates</label>
+<label id="guides-option" hidden><input id="visuals" type="checkbox" checked> Guides</label>
+<label id="candidates-option" hidden><input id="candidates" type="checkbox" checked> Candidates</label>
+<div class="toolbar-actions" role="group" aria-label="Puzzle actions">
 <button id="clear" class="button secondary">Clear</button>
 <button id="validate" class="button secondary">Validate</button>
 <button id="solve" class="button primary">Solve</button>
 </div>
-<span id="board-hint" class="sr-only">Select any cell · Type 1–9 · Delete to clear</span>
+</div>
+<p id="board-hint" class="entry-hint">Tap any cell to enter 1–9. Fill the clues in any order.</p>
 <div class="board-stage"><div class="board-wrap"><div id="board" class="board" role="group" aria-label="Editable Sudoku board"></div><svg id="deduction-overlay" class="deduction-overlay" aria-hidden="true"></svg></div></div>
 <p id="message" class="message" role="status" aria-live="polite"></p>
 <ul id="issues" class="issues" aria-label="Validation issues" hidden></ul>
