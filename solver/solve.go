@@ -1,7 +1,25 @@
 package solver
 
-// SolveStep applies one technique. A false result means no supported move remains.
+// SolveStep separates placement from its peer-candidate cleanup. The pending
+// cleanup always runs before another technique can inspect the candidates.
 func (s *Sudoku) SolveStep() (Step, bool) {
+	if step, ok := s.applyPendingCandidates(); ok {
+		return step, true
+	}
+	s.deferPeerUpdates = true
+	defer func() { s.deferPeerUpdates = false }()
+	step, ok := s.applyTechnique()
+	if ok {
+		if step.Number > 0 {
+			step.Kind = "placement"
+		} else {
+			step.Kind = "elimination"
+		}
+	}
+	return step, ok
+}
+
+func (s *Sudoku) applyTechnique() (Step, bool) {
 	if step, ok := ApplyFullHouse(s); ok {
 		return step, true
 	}
@@ -50,8 +68,10 @@ func (s *Sudoku) Solve() *SolverHistory {
 
 // SolveAutomatically avoids history allocation for database benchmarks.
 func (s *Sudoku) SolveAutomatically() {
+	// Benchmarks do not need separate teaching steps.
+	s.applyPendingCandidates()
 	for {
-		if _, ok := s.SolveStep(); !ok {
+		if _, ok := s.applyTechnique(); !ok {
 			return
 		}
 	}

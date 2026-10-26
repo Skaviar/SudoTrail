@@ -81,6 +81,9 @@ h2 { margin: 0; }
 .guide-unit { fill: none; stroke: #7d9b54; stroke-width: 2; stroke-dasharray: 5 4; opacity: .8; }
 .guide-link { fill: none; stroke: #be7560; stroke-width: 1.4; stroke-dasharray: 4 4; opacity: .6; }
 .guide-axis { stroke: #508f81; stroke-width: 2.5; opacity: .65; stroke-linecap: round; }
+.guide-blocker { stroke: #ab694d; stroke-dasharray: none; opacity: .8; stroke-width: 1.6; }
+.guide-restriction { fill: none; stroke: #b28050; stroke-width: 1.5; }
+.candidate-grid .blocked { color: #9a6541; text-decoration: line-through; background: #f5e7d7; border-radius: 3px; }
 .guide-ring { fill: none; stroke: #c05b45; stroke-width: 1.5; }
 .guide-cross { stroke: #b24c39; stroke-width: 1.8; stroke-linecap: round; }
 

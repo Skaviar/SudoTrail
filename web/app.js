@@ -193,21 +193,14 @@ $('visuals').addEventListener('change', render);
 new ResizeObserver(() => renderVisuals(states[current], states[current]?.step)).observe(board);
 render();
 
-// Read structured evidence from Go; placement propagation is a candidate-state diff.
+// Placements explain existing restrictions. Only explicit elimination steps
+// remove candidates; the UI never infers peer cleanup from a placement diff.
 function visualData(state, step) {
-  if (!step) return { sources: [], digits: [], units: [], targets: [] };
-  const visual = step.visual || {};
-  const sources = visual.sources || (step.number > 0 ? [{ row: step.row, col: step.col }] : []);
-  const targets = [...(step.eliminations || [])];
-  const previous = states[current - 1];
-  if (step.number > 0 && previous) {
-    for (let row = 0; row < 9; row++) for (let col = 0; col < 9; col++) {
-      if (!state.board[row][col] && (previous.candidates[row][col] & (1 << step.number)) && !(state.candidates[row][col] & (1 << step.number))) {
-        targets.push({ row, col, number: step.number });
-      }
-    }
-  }
-  return { sources, digits: visual.digits || [step.number].filter(Boolean), units: visual.units || [], targets };
+  const visual = step?.visual || {};
+  return {
+    sources: visual.sources || [], digits: visual.digits || [], units: visual.units || [],
+    links: visual.links || [], restrictions: visual.restrictions || [], targets: step?.eliminations || []
+  };
 }
 function renderVisuals(state, step) {
   const overlay = $('deduction-overlay');
@@ -215,12 +208,12 @@ function renderVisuals(state, step) {
   for (const { cell, marks } of cells) {
     cell.classList.remove('focus-unit', 'source-cell', 'target-cell');
     for (const mark of marks.children) mark.classList.remove('evidence');
-    // Remove propagation marks from a previous resize/render.
-    for (const mark of marks.querySelectorAll('[data-propagated]')) { mark.textContent = ''; mark.classList.remove('removed'); delete mark.dataset.propagated; }
+    // Remove display-only restriction marks before redrawing guides.
+    for (const mark of marks.querySelectorAll('[data-propagated]')) { mark.textContent = ''; mark.classList.remove('removed', 'blocked'); delete mark.dataset.propagated; }
   }
   $('visual-summary').hidden = true;
   if (!state || !step || !$('visuals').checked) return;
-  const { sources, digits, units, targets } = visualData(state, step);
+  const { sources, digits, units, links, restrictions, targets } = visualData(state, step);
   const bounds = board.getBoundingClientRect();
   overlay.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
   const svg = (tag, attributes) => {
@@ -228,6 +221,12 @@ function renderVisuals(state, step) {
     for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
     overlay.append(element); return element;
   };
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  for (const [key, value] of Object.entries({ id: 'blocking-arrow', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 5, markerHeight: 5, orient: 'auto-start-reverse' })) arrow.setAttribute(key, value);
+  const arrowShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  arrowShape.setAttribute('d', 'M0,1 L7,4 L0,7'); arrowShape.setAttribute('fill', 'none'); arrowShape.setAttribute('stroke', '#ab694d'); arrowShape.setAttribute('stroke-width', '1.5');
+  arrow.append(arrowShape); defs.append(arrow); overlay.append(defs);
   const cellAt = p => cells[p.row * 9 + p.col];
   const point = (p, digit) => {
     const entry = cellAt(p);
@@ -253,33 +252,71 @@ function renderVisuals(state, step) {
     }
   }
   // Locked candidates get one clear axis through their source cells.
-  if (sources.length > 1 && digits.length === 1) {
+  if (!step.number && !links.length && sources.length > 1 && digits.length === 1) {
     const points = sources.map(source => point(source, digits[0]));
     if (sources.every(p => p.row === sources[0].row) || sources.every(p => p.col === sources[0].col)) {
       const a = points[0], b = points.at(-1);
       svg('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'guide-axis' });
     }
   }
-  for (const target of targets) {
-    const entry = cellAt(target); entry.cell.classList.add('target-cell');
+  const markTarget = (target, restricted) => {
+    const entry = cellAt(target);
+    entry.cell.classList.add('target-cell');
     const mark = entry.marks.querySelector(`[data-digit="${target.number}"]`);
-    if (mark && !mark.textContent) { mark.textContent = target.number; mark.classList.add('removed'); mark.dataset.propagated = 'true'; }
+    if (mark && !mark.textContent) {
+      mark.textContent = target.number;
+      mark.classList.add(restricted ? 'blocked' : 'removed');
+      mark.dataset.propagated = 'true';
+    }
+    // A placement cell shows its placed value; do not circle that value as if
+    // it were the candidate being ruled out.
+    if (state.board[target.row][target.col]) return;
     const end = point(target, target.number);
+    const radius = $('candidates').checked ? Math.max(5, bounds.width / 70) : bounds.width / 34;
+    svg('circle', { cx: end.x, cy: end.y, r: radius, class: restricted ? 'guide-restriction' : 'guide-ring' });
+    if (!$('candidates').checked) svg('path', { d: `M${end.x - 4},${end.y - 4}l8,8m0,-8l-8,8`, class: 'guide-cross' });
+  };
+  const connect = (source, target, number, actualBlocker) => {
+    const start = point(source, number), end = point(target, number);
+    if (state.board[target.row][target.col]) {
+      // Terminate at the edge of the destination cell, leaving its digit clear.
+      const distance = Math.hypot(end.x - start.x, end.y - start.y);
+      const inset = bounds.width / 9 * .34;
+      if (distance > inset) { end.x -= (end.x - start.x) / distance * inset; end.y -= (end.y - start.y) / distance * inset; }
+    }
+    const line = svg('line', {
+      x1: start.x, y1: start.y, x2: end.x, y2: end.y,
+      class: actualBlocker ? 'guide-link guide-blocker' : 'guide-link',
+      'data-from': `${source.row},${source.col}`, 'data-to': `${target.row},${target.col}`, 'data-number': number,
+      ...(actualBlocker ? { 'marker-end': 'url(#blocking-arrow)' } : {})
+    });
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = `R${source.row + 1}C${source.col + 1} ${actualBlocker ? 'contains' : 'reserves'} ${number}: ${number} cannot go in R${target.row + 1}C${target.col + 1}.`;
+    line.append(title);
+  };
+  for (const restriction of restrictions) markTarget(restriction, true);
+  // Exact source-to-cell relationships supplied by Go take precedence.
+  for (const link of links) connect(link.from, link.to, link.number, true);
+  for (const target of targets) {
+    markTarget(target, false);
+    if (links.length) continue;
     const sameCell = sources.some(source => source.row === target.row && source.col === target.col);
     if (!sameCell && sources.length) {
-      // One nearest source per target avoids a web of crossing connections.
-      const candidates = sources.map(source => point(source, target.number));
-      const start = candidates.reduce((a, b) => Math.hypot(a.x - end.x, a.y - end.y) < Math.hypot(b.x - end.x, b.y - end.y) ? a : b);
-      svg('line', { x1: start.x, y1: start.y, x2: end.x, y2: end.y, class: 'guide-link' });
+      // Locked-candidate evidence contains unplaced candidates; these are
+      // deduction links rather than claims about an already placed digit.
+      const end = point(target, target.number);
+      const source = sources.reduce((a, b) => {
+        const p = point(a, target.number), q = point(b, target.number);
+        return Math.hypot(p.x - end.x, p.y - end.y) < Math.hypot(q.x - end.x, q.y - end.y) ? a : b;
+      });
+      connect(source, target, target.number, false);
     }
-    const radius = $('candidates').checked ? Math.max(5, bounds.width / 70) : bounds.width / 34;
-    svg('circle', { cx: end.x, cy: end.y, r: radius, class: 'guide-ring' });
-    if (!$('candidates').checked) svg('path', { d: `M${end.x - 4},${end.y - 4}l8,8m0,-8l-8,8`, class: 'guide-cross' });
   }
   const unitNames = units.map(u => `${u.kind === 'column' ? 'Column' : u.kind === 'box' ? 'Box' : 'Row'} ${u.index + 1}`);
   const text = [];
   if (unitNames.length) text.push(unitNames.join(' + '));
-  if (targets.length) text.push(`${targets.length} candidate${targets.length === 1 ? '' : 's'} removed${step.number > 0 ? ' from peers' : ''}`);
+  if (restrictions.length) text.push(`${restrictions.length} alternative${restrictions.length === 1 ? '' : 's'} ruled out`);
+  if (targets.length) text.push(`${targets.length} candidate${targets.length === 1 ? '' : 's'} removed`);
   $('visual-summary').textContent = text.join(' · ');
   $('visual-summary').hidden = !text.length;
 }

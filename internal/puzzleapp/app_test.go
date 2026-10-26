@@ -11,8 +11,23 @@ func TestSharedSolverContract(t *testing.T) {
 		t.Fatal("valid puzzle rejected")
 	}
 	response, err := Solve(puzzle)
-	if err != nil || !response.Solved || response.Status != "solved" || len(response.States) != 52 {
+	if err != nil || !response.Solved || response.Status != "solved" {
 		t.Fatalf("unexpected result: %v, %d states", err, len(response.States))
+	}
+	placements, cleanups := 0, 0
+	for i, state := range response.States[1:] {
+		if state.Step.Kind == "placement" {
+			placements++
+		}
+		if state.Step.Technique == "Peer Elimination" {
+			cleanups++
+			if state.Board != response.States[i].Board {
+				t.Fatal("peer cleanup changed board values")
+			}
+		}
+	}
+	if placements != 51 || cleanups == 0 {
+		t.Fatalf("expected 51 placements and separate cleanup steps, got %d/%d", placements, cleanups)
 	}
 	if response.States[0].Step != nil || response.States[0].Board[0][2] != 0 {
 		t.Fatal("lost initial state")

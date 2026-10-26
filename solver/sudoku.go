@@ -95,7 +95,11 @@ func (s *Sudoku) Place(row, col, number int) {
 	s.Board[row][col] = int8(number)
 	s.Candidates[row][col] = 0
 
-	s.updateCandidates(row, col, number)
+	if s.deferPeerUpdates {
+		s.pending = s.peerUpdate(row, col, number)
+	} else {
+		s.updateCandidates(row, col, number)
+	}
 }
 
 func (s *Sudoku) updateCandidates(row, col, number int) {

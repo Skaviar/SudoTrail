@@ -9,6 +9,8 @@ type Puzzle struct {
 }
 
 type Sudoku struct {
-	Board      [9][9]int8
-	Candidates [9][9]uint16
+	pending          candidateUpdate
+	deferPeerUpdates bool
+	Board            [9][9]int8
+	Candidates       [9][9]uint16
 }

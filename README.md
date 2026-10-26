@@ -242,12 +242,17 @@ The Guides checkbox controls highlighted evidence cells, dashed outlines around
 focus rows/columns/boxes, and connections to eliminated candidates. Teal marks
 identify evidence; coral rings and crossed-out digits identify removals. Hidden
 subsets highlight their reserved digits and the other candidates removed from
-those same cells. Placements show candidate removals in peer cells by comparing
-adjacent history snapshots. With candidates hidden, rings and crosses still mark
+those same cells. Placement guides now connect the actual already-filled blocking digit to each
+ruled-out cell. Amber crossed-out candidates show an existing restriction, not
+an elimination being performed by the placement. A separate **Peer Elimination**
+step follows when the new placement removes candidates from peers; its coral
+marks and arrows originate at that newly placed digit. Placements that remove
+no peer candidates do not create an empty cleanup step. With candidates hidden, rings and crosses still mark
 target cells. The SVG overlay resizes with the board.
 
 Steps may include `visual` with `sources` (cell coordinates), `digits` (the digits
-supporting the deduction), and `units` (`kind`: `row`, `column`, or `box`, plus a
+supporting the deduction), `links` (exact `from`, `to`, `number`, and shared
+`unit`), `restrictions` (already excluded candidates), and `units` (`kind`: `row`, `column`, or `box`, plus a
 zero-based `index`). These fields are recorded by the techniques themselves;
 the UI does not infer evidence from explanation strings.
 
@@ -287,3 +292,16 @@ row remains visible when details expand. The elimination summary is inside
 **Why this move?**, alongside detailed reasoning; that section scrolls separately
 when needed, without moving the navigation controls. Returning to editing restores the
 puzzle-entry actions. Detailed reasoning is collapsed by default. Color meanings appear beside the step count. The Godoku title bar disappears once the board contains a puzzle and returns when the board is cleared. Puzzle actions, photo import, and board settings share one horizontal toolbar above the grid; on narrow screens the toolbar scrolls sideways instead of wrapping.
+
+### Placement and elimination sequencing
+
+`SolveStep()` first applies any pending peer cleanup. Otherwise it applies one
+technique. A placement fills its cell and clears that cell's candidates; the
+other cells retain their candidates until the following `Peer Elimination`
+step. No further deduction runs on that intermediate state. `kind` identifies
+`placement` versus `elimination` steps. History records both phases and preserves
+the pending update when restoring an intermediate snapshot.
+
+`SolveAutomatically()` continues to propagate placements immediately for terminal
+benchmarks. Standalone `Apply...` calls and `Place()` also retain immediate
+propagation; the separate teaching phases are controlled by `SolveStep()`.

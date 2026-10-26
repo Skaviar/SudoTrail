@@ -2,6 +2,7 @@ package solver
 
 // BoardState is a snapshot of the Sudoku board and its candidates.
 type BoardState struct {
+	pending    candidateUpdate
 	Board      [9][9]int8
 	Candidates [9][9]uint16
 }
@@ -10,6 +11,7 @@ type BoardState struct {
 // Arrays are copied by value, so later solver changes won't affect the snapshot.
 func CaptureBoardState(s *Sudoku) BoardState {
 	return BoardState{
+		pending:    s.pending,
 		Board:      s.Board,
 		Candidates: s.Candidates,
 	}
@@ -17,6 +19,8 @@ func CaptureBoardState(s *Sudoku) BoardState {
 
 // Restore copies a saved snapshot back into a Sudoku solver.
 func (state BoardState) Restore(s *Sudoku) {
+	s.pending = state.pending
+	s.deferPeerUpdates = false
 	s.Board = state.Board
 	s.Candidates = state.Candidates
 }
@@ -50,6 +54,8 @@ func NewSolverHistory(s *Sudoku) *SolverHistory {
 func (h *SolverHistory) RecordStep(s *Sudoku, step Step) {
 	if step.Visual != nil {
 		visual := *step.Visual
+		visual.Links = append([]VisualLink(nil), visual.Links...)
+		visual.Restrictions = append([]CandidateElimination(nil), visual.Restrictions...)
 		visual.Sources = append([]Cell(nil), visual.Sources...)
 		visual.Digits = append([]int(nil), visual.Digits...)
 		visual.Units = append([]VisualUnit(nil), visual.Units...)

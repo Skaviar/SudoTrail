@@ -8,6 +8,7 @@ type CandidateElimination struct {
 }
 
 type Step struct {
+	Kind             string      `json:"kind"` // placement or elimination
 	Visual           *StepVisual `json:"visual,omitempty"`
 	Technique        string      `json:"technique"`
 	Explanation      string      `json:"explanation"`

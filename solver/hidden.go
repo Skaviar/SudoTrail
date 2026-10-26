@@ -17,10 +17,11 @@ func ApplyHiddenSingle(s *Sudoku) (Step, bool) {
 			if count != 1 {
 				continue
 			}
+			visual := hiddenSingleVisual(s, unit, target, number)
 			details := explainHiddenSingle(s, unit, target, number)
 			s.Place(target.Row, target.Col, number)
 			return Step{
-				Visual:      &StepVisual{Sources: []Cell{target}, Digits: []int{number}, Units: []VisualUnit{describeUnit(unit)}},
+				Visual:      visual,
 				Technique:   "Hidden Single",
 				Explanation: fmt.Sprintf("In %s, number %d has only one possible location.", unit.name, number),
 				Details:     details, Row: target.Row, Col: target.Col, Number: number,
@@ -30,39 +31,16 @@ func ApplyHiddenSingle(s *Sudoku) (Step, bool) {
 	return Step{}, false
 }
 
-func explainHiddenSingle(s *Sudoku, unit unit, target Cell, number int) []string {
-	details := []string{fmt.Sprintf("We are looking for %d in %s.", number, unit.name)}
-	// Group blocked cells by the first unit that excludes the digit.
-	// The fixed unit order keeps explanations deterministic.
-	groups := make(map[string][]string)
-	var reasons []string
-	for _, cell := range unit.cells {
-		if s.Board[cell.Row][cell.Col] != 0 || cell == target {
-			continue
+func explainHiddenSingle(s *Sudoku, u unit, target Cell, number int) []string {
+	visual := hiddenSingleVisual(s, u, target, number)
+	details := []string{fmt.Sprintf("Find %d in %s.", number, u.name)}
+	for _, restriction := range visual.Restrictions {
+		cell := Cell{Row: restriction.Row, Col: restriction.Col}
+		if link, ok := blockingNumber(s, cell, number); ok {
+			details = append(details, fmt.Sprintf("%s already contains %d. Both cells share %s, so %s cannot contain %d.", cellName(link.From.Row, link.From.Col), number, unitLabel(link.Unit), cellName(cell.Row, cell.Col), number))
+		} else {
+			details = append(details, fmt.Sprintf("An earlier solving step ruled out %d in %s.", number, cellName(cell.Row, cell.Col)))
 		}
-		reason := "Earlier solving steps removed this candidate"
-		for _, peerUnit := range allUnits() {
-			containsCell, containsNumber := false, false
-			for _, peer := range peerUnit.cells {
-				if peer == cell {
-					containsCell = true
-				}
-				if int(s.Board[peer.Row][peer.Col]) == number {
-					containsNumber = true
-				}
-			}
-			if containsCell && containsNumber {
-				reason = fmt.Sprintf("%d is already in %s", number, peerUnit.name)
-				break
-			}
-		}
-		if _, exists := groups[reason]; !exists {
-			reasons = append(reasons, reason)
-		}
-		groups[reason] = append(groups[reason], cellName(cell.Row, cell.Col))
 	}
-	for _, reason := range reasons {
-		details = append(details, fmt.Sprintf("%s → eliminate %s.", reason, formatList(groups[reason])))
-	}
-	return append(details, fmt.Sprintf("Only %s remains, so %s = %d.", cellName(target.Row, target.Col), cellName(target.Row, target.Col), number))
+	return append(details, fmt.Sprintf("Only %s remains, so place %d there.", cellName(target.Row, target.Col), number))
 }

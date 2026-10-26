@@ -21,9 +21,11 @@ func ApplyFullHouse(s *Sudoku) (Step, bool) {
 		if emptyCount != 1 || number == 0 {
 			continue
 		}
+		visual := singleCellVisual(s, empty, number)
+		visual.Units = []VisualUnit{describeUnit(unit)}
 		s.Place(empty.Row, empty.Col, number)
 		return Step{
-			Visual:      &StepVisual{Sources: []Cell{empty}, Digits: []int{number}, Units: []VisualUnit{describeUnit(unit)}},
+			Visual:      visual,
 			Technique:   "Full House",
 			Explanation: fmt.Sprintf("%s has only one empty cell, so its value is forced.", unit.name),
 			Details: []string{
