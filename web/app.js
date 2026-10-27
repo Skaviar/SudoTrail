@@ -22,15 +22,38 @@ for (let index = 0; index < 81; index++) {
   input.inputMode = 'numeric';
   input.autocomplete = 'off';
   input.setAttribute('aria-label', `Row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`);
-  input.addEventListener('input', () => {
+  input.addEventListener('input', event => {
+    if (busy || solvePending || states.length || input.readOnly) {
+      render();
+      return;
+    }
+    if (event.isComposing) return;
+    const enteredDigit = /[1-9]/.test(event.data ?? input.value);
+    const wasFocused = document.activeElement === input;
+    const insertedText = event.inputType?.startsWith('insert') || event.data != null;
+    if (givenClues === null && wasFocused && insertedText && !enteredDigit) {
+      input.value = original[index] || '';
+      focusNextEmptyCell(index);
+      return;
+    }
     const digits = input.value.replace(/[^1-9]/g, '');
     original[index] = digits ? Number(digits.at(-1)) : 0;
     conflicts.clear();
     $('issues').hidden = true;
     message('');
     render();
+    if (givenClues === null && digits && enteredDigit && wasFocused) focusNextEmptyCell(index);
   });
   input.addEventListener('keydown', event => {
+    // During initial transcription, non-digit typing means an empty square.
+    // Preserve navigation, deletion, shortcuts and IME composition.
+    const initialEntry = givenClues === null && !busy && !solvePending && !states.length && !input.readOnly;
+    if (initialEntry && !event.isComposing && !event.ctrlKey && !event.metaKey && !event.altKey &&
+        (event.key === 'Enter' || (event.key.length === 1 && !/^[1-9]$/.test(event.key)))) {
+      event.preventDefault();
+      focusNextEmptyCell(index);
+      return;
+    }
     const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -9, ArrowDown: 9 };
     if (Object.hasOwn(offsets, event.key)) {
       event.preventDefault();
@@ -49,6 +72,18 @@ for (let index = 0; index < 81; index++) {
   cell.append(marks, input);
   board.append(cell);
   cells.push({ cell, input, marks });
+}
+
+// Advance in reading order, skipping every filled cell. Wrap to earlier blanks
+// so entering a puzzle out of order still works; a full board keeps focus.
+function focusNextEmptyCell(index) {
+  for (let offset = 1; offset < 81; offset++) {
+    const next = (index + offset) % 81;
+    if (original[next] === 0) {
+      cells[next].input.focus();
+      return;
+    }
+  }
 }
 
 function message(text, kind = '') {
@@ -106,7 +141,7 @@ function render() {
   $('edit').hidden = !state;
   $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Enter a puzzle';
   $('board-hint').hidden = !!state || givenClues !== null;
-  $('board-hint').textContent = 'Tap any cell to enter 1–9. Fill the clues in any order.';
+  $('board-hint').textContent = 'Type 1–9 for clues; 0, space or another character skips a blank.';
   $('step-count').textContent = state ? `${states.length - 1} steps` : '';
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
   $('timeline').max = Math.max(0, states.length - 1);

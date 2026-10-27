@@ -164,7 +164,7 @@ go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
 
 Open `http://127.0.0.1:8080` in a browser. The interface supports:
 
-- Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear.
+- Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random/photo puzzles, editing after a solve, and solution playback do not auto-advance.
 - Validating clues and highlighting conflicting cells.
 - Loading a random database puzzle.
 - Solving and exploring history using Previous/Next, First/Last, or a slider.
