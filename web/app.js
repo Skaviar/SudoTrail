@@ -234,7 +234,8 @@ function visualData(state, step) {
   const visual = step?.visual || {};
   return {
     sources: visual.sources || [], digits: visual.digits || [], units: visual.units || [],
-    links: visual.links || [], restrictions: visual.restrictions || [], targets: step?.eliminations || []
+    links: visual.links || [], candidateLinks: visual.candidateLinks || [],
+    restrictions: visual.restrictions || [], targets: step?.eliminations || []
   };
 }
 function renderVisuals(state, step) {
@@ -248,7 +249,7 @@ function renderVisuals(state, step) {
   }
   $('visual-summary').hidden = true;
   if (!state || !step || !$('visuals').checked) return;
-  const { sources, digits, units, links, restrictions, targets } = visualData(state, step);
+  const { sources, digits, units, links, candidateLinks, restrictions, targets } = visualData(state, step);
   const bounds = board.getBoundingClientRect();
   overlay.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
   const svg = (tag, attributes) => {
@@ -281,13 +282,15 @@ function renderVisuals(state, step) {
   }
   for (const source of sources) {
     const entry = cellAt(source); entry.cell.classList.add('source-cell');
-    for (const digit of digits) {
+    const sameCell = p => p.row === source.row && p.col === source.col;
+    const linkedDigits = [...new Set(candidateLinks.filter(link => sameCell(link.from) || sameCell(link.to)).map(link => link.number))];
+    for (const digit of linkedDigits.length ? linkedDigits : digits) {
       const mark = entry.marks.querySelector(`[data-digit="${digit}"]`);
       if (mark?.textContent && !mark.classList.contains('removed')) mark.classList.add('evidence');
     }
   }
   // Locked candidates get one clear axis through their source cells.
-  if (!step.number && !links.length && sources.length > 1 && digits.length === 1) {
+  if (!step.number && !links.length && !candidateLinks.length && sources.length > 1 && digits.length === 1) {
     const points = sources.map(source => point(source, digits[0]));
     if (sources.every(p => p.row === sources[0].row) || sources.every(p => p.col === sources[0].col)) {
       const a = points[0], b = points.at(-1);
@@ -328,13 +331,25 @@ function renderVisuals(state, step) {
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     title.textContent = `R${source.row + 1}C${source.col + 1} ${actualBlocker ? 'contains' : 'reserves'} ${number}: ${number} cannot go in R${target.row + 1}C${target.col + 1}.`;
     line.append(title);
+    return line;
   };
   for (const restriction of restrictions) markTarget(restriction, true);
   // Exact source-to-cell relationships supplied by Go take precedence.
   for (const link of links) connect(link.from, link.to, link.number, true);
+  for (const link of candidateLinks) {
+    const line = connect(link.from, link.to, link.number, false);
+    line.dataset.kind = link.kind;
+    line.classList.add(`guide-${link.kind}`);
+    const from = `R${link.from.row + 1}C${link.from.col + 1}`, to = `R${link.to.row + 1}C${link.to.col + 1}`;
+    line.querySelector('title').textContent = link.kind === 'strong'
+      ? `${link.number} must go in one of ${from} or ${to} in ${link.unit.kind} ${link.unit.index + 1}.`
+      : link.kind === 'weak'
+        ? `${from} and ${to} cannot both contain ${link.number}.`
+        : `The highlighted pattern rules out ${link.number} in ${to}; ${from} is a supporting candidate.`;
+  }
   for (const target of targets) {
     markTarget(target, false);
-    if (links.length) continue;
+    if (links.length || candidateLinks.length) continue;
     const sameCell = sources.some(source => source.row === target.row && source.col === target.col);
     if (!sameCell && sources.length) {
       // Locked-candidate evidence contains unplaced candidates; these are

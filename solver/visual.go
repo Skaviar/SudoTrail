@@ -5,11 +5,23 @@ import "fmt"
 // StepVisual describes the evidence behind a deduction for a visual renderer.
 // Unit coordinates and cell coordinates are zero-based.
 type StepVisual struct {
-	Links        []VisualLink           `json:"links,omitempty"`
-	Restrictions []CandidateElimination `json:"restrictions,omitempty"`
-	Sources      []Cell                 `json:"sources"`
-	Digits       []int                  `json:"digits"`
-	Units        []VisualUnit           `json:"units"`
+	CandidateLinks []CandidateLink        `json:"candidateLinks,omitempty"`
+	Links          []VisualLink           `json:"links,omitempty"`
+	Restrictions   []CandidateElimination `json:"restrictions,omitempty"`
+	Sources        []Cell                 `json:"sources"`
+	Digits         []int                  `json:"digits"`
+	Units          []VisualUnit           `json:"units"`
+}
+
+// CandidateLink connects possible digits, rather than already placed numbers.
+// A strong link means exactly one endpoint contains Number in Unit; a weak
+// link means they cannot both contain it. Elimination links point to removals.
+type CandidateLink struct {
+	From   Cell       `json:"from"`
+	To     Cell       `json:"to"`
+	Number int        `json:"number"`
+	Unit   VisualUnit `json:"unit"`
+	Kind   string     `json:"kind"` // strong, weak, or elimination
 }
 
 type VisualUnit struct {

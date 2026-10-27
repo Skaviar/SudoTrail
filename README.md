@@ -252,7 +252,9 @@ target cells. The SVG overlay resizes with the board.
 
 Steps may include `visual` with `sources` (cell coordinates), `digits` (the digits
 supporting the deduction), `links` (exact `from`, `to`, `number`, and shared
-`unit`), `restrictions` (already excluded candidates), and `units` (`kind`: `row`, `column`, or `box`, plus a
+`unit` for placed blockers), `candidateLinks` (candidate connections with
+`from`, `to`, `number`, `unit`, and `kind`: `strong`, `weak`, or `elimination`),
+`restrictions` (already excluded candidates), and `units` (`kind`: `row`, `column`, or `box`, plus a
 zero-based `index`). These fields are recorded by the techniques themselves;
 the UI does not infer evidence from explanation strings.
 
@@ -309,6 +311,41 @@ removed candidates originating only at source cells that allow that digit.
 Smaller subsets run first: Naked Pair, Hidden Pair, Naked Triple, Hidden Triple,
 Naked Quadruple, Hidden Quadruple (after singles and intersections).
 Implementation: `solver/naked_subsets.go`.
+
+### Fish, wings, and single-digit patterns
+
+The solver also supports these ten techniques:
+
+- **X-Wing, Swordfish, Jellyfish** (`solver/fish.go`): for one digit, reserve
+  2, 3, or 4 columns for the same number of rows, or vice versa. Intersections
+  may be sparse. Candidates outside the selected rows/columns are eliminated.
+- **XY-Wing, XYZ-Wing, W-Wing** (`solver/wings.go`): use connected candidate
+  cells to prove at least one witness must contain a digit. XYZ-Wing targets
+  must see the pivot as well as both wings. W-Wing requires two identical
+  bivalue cells connected through a unit with only two places for one digit.
+- **Skyscraper, 2-String Kite, Turbot Fish, Empty Rectangle**
+  (`solver/single_digit.go`): combine restricted locations of a single digit.
+  Named Skyscrapers and Kites run before the more general Turbot detector.
+  Empty Rectangles use at least three candidates in the box; the equivalent
+  two-candidate patterns are handled by Turbot Fish.
+
+All are candidate-elimination steps, with explanations and explicit visual
+evidence. Solid teal lines join the only two possible locations in a unit;
+dashed teal lines connect candidates that cannot both be true. Coral lines
+connect the supporting candidates to removals. These candidate links are
+separate from arrows originating at already placed numbers.
+
+After singles, intersections, and subsets, the order is X-Wing, Skyscraper,
+2-String Kite, Turbot Fish, Empty Rectangle, XY-Wing, XYZ-Wing, W-Wing,
+Swordfish, Jellyfish. A successful elimination returns immediately so the next
+step checks simpler techniques again. These methods use the same Go code in
+the terminal, HTTP API, and browser WASM build.
+
+Tests cover both orientations, sparse fish, broken patterns, visual evidence,
+known puzzle solutions, and independently enumerated single-digit placements.
+Definitions: [basic fish](https://hodoku.sourceforge.net/en/tech_fishb.php),
+[wings](https://hodoku.sourceforge.net/en/tech_wings.php), and
+[single-digit patterns](https://hodoku.sourceforge.net/en/tech_sdp.php).
 
 ### Placement and elimination sequencing
 

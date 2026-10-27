@@ -14,6 +14,13 @@ type unit struct {
 	cells []Cell
 }
 
+// cellsSeeEachOther reports whether placing a digit in one cell would exclude
+// that digit from the other. A cell is not its own peer.
+func cellsSeeEachOther(a, b Cell) bool {
+	return a != b && (a.Row == b.Row || a.Col == b.Col ||
+		a.Row/3 == b.Row/3 && a.Col/3 == b.Col/3)
+}
+
 // allUnits returns all 27 Sudoku units:
 // 9 rows, 9 columns, and 9 boxes.
 func allUnits() []unit {

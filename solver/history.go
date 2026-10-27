@@ -54,6 +54,7 @@ func NewSolverHistory(s *Sudoku) *SolverHistory {
 func (h *SolverHistory) RecordStep(s *Sudoku, step Step) {
 	if step.Visual != nil {
 		visual := *step.Visual
+		visual.CandidateLinks = append([]CandidateLink(nil), visual.CandidateLinks...)
 		visual.Links = append([]VisualLink(nil), visual.Links...)
 		visual.Restrictions = append([]CandidateElimination(nil), visual.Restrictions...)
 		visual.Sources = append([]Cell(nil), visual.Sources...)

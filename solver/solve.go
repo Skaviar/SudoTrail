@@ -59,6 +59,36 @@ func (s *Sudoku) applyTechnique() (Step, bool) {
 	if step, ok := ApplyHiddenSubset(s, 4); ok {
 		return step, true
 	}
+	if step, ok := ApplyBasicFish(s, 2); ok {
+		return step, true
+	}
+	if step, ok := ApplySkyscraper(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyTwoStringKite(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyTurbotFish(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyEmptyRectangle(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyXYWing(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyXYZWing(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyWWing(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyBasicFish(s, 3); ok {
+		return step, true
+	}
+	if step, ok := ApplyBasicFish(s, 4); ok {
+		return step, true
+	}
 
 	return Step{}, false
 }
