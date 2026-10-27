@@ -340,7 +340,13 @@ function renderVisuals(state, step) {
       // Locked-candidate evidence contains unplaced candidates; these are
       // deduction links rather than claims about an already placed digit.
       const end = point(target, target.number);
-      const source = sources.reduce((a, b) => {
+      // For mixed triples/quads, only a cell that actually allows this digit
+      // may anchor the deduction line.
+      const supporting = sources.filter(source =>
+        state.board[source.row][source.col] === target.number ||
+        (state.candidates[source.row][source.col] & (1 << target.number)) !== 0);
+      if (!supporting.length) continue;
+      const source = supporting.reduce((a, b) => {
         const p = point(a, target.number), q = point(b, target.number);
         return Math.hypot(p.x - end.x, p.y - end.y) < Math.hypot(q.x - end.x, q.y - end.y) ? a : b;
       });

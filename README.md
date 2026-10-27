@@ -293,6 +293,23 @@ row remains visible when details expand. The elimination summary is inside
 when needed, without moving the navigation controls. Returning to editing restores the
 puzzle-entry actions. Detailed reasoning is collapsed by default. Color meanings appear beside the step count. The Godoku title bar disappears once the board contains a puzzle and returns when the board is cleared. Puzzle actions, photo import, and board settings share one horizontal toolbar above the grid; on narrow screens the toolbar scrolls sideways instead of wrapping.
 
+### Naked subsets
+
+The solver supports Naked Pairs, Triples, and Quadruples in rows, columns, and
+boxes. It tries combinations of 2–4 empty cells and requires exactly that many
+distinct candidates across the selected cells. Candidates can differ between
+cells, for example `{2,5}`, `{5,8}`, `{2,8}` for a triple.
+
+Reserved digits are removed only from other cells in shared units. A locked
+pair/triple sharing both a line and a box applies to both, deduplicating targets.
+No placement is made, and subsets with no actual eliminations are skipped.
+The UI highlights the selected cells/digits and shared units, with lines to
+removed candidates originating only at source cells that allow that digit.
+
+Smaller subsets run first: Naked Pair, Hidden Pair, Naked Triple, Hidden Triple,
+Naked Quadruple, Hidden Quadruple (after singles and intersections).
+Implementation: `solver/naked_subsets.go`.
+
 ### Placement and elimination sequencing
 
 `SolveStep()` first applies any pending peer cleanup. Otherwise it applies one

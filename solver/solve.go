@@ -40,10 +40,20 @@ func (s *Sudoku) applyTechnique() (Step, bool) {
 		return step, true
 	}
 
+	// Try smaller subsets before larger ones, keeping the simpler deduction first.
+	if step, ok := ApplyNakedSubset(s, 2); ok {
+		return step, true
+	}
 	if step, ok := ApplyHiddenSubset(s, 2); ok {
 		return step, true
 	}
+	if step, ok := ApplyNakedSubset(s, 3); ok {
+		return step, true
+	}
 	if step, ok := ApplyHiddenSubset(s, 3); ok {
+		return step, true
+	}
+	if step, ok := ApplyNakedSubset(s, 4); ok {
 		return step, true
 	}
 	if step, ok := ApplyHiddenSubset(s, 4); ok {
