@@ -4,8 +4,10 @@ GO ?= go
 ADDR ?= 127.0.0.1:8080
 DATABASE ?= sudoku-3m.csv
 DIST ?= dist
+WORKERS ?=
+LIMIT ?= 0
 
-.PHONY: help run web build preview dev test race vet check fmt
+.PHONY: help run benchmark web build preview dev test race vet check fmt
 
 help:
 	@printf '%s\n' \
@@ -15,16 +17,20 @@ help:
 	  '  make preview  Build WASM and preview it locally (same as dev)' \
 	  '  make web      Run the Go HTTP API and website' \
 	  '  make run      Run the terminal app (including benchmark menu)' \
+	  '  make benchmark Run the CSV benchmark (WORKERS=N LIMIT=N)' \
 	  '  make test     Run Go tests' \
 	  '  make race     Run Go tests with the race detector' \
 	  '  make vet      Run go vet' \
 	  '  make check    Run tests and go vet' \
 	  '  make fmt      Format Go source files' \
 	  '' \
-	  'Options: ADDR=127.0.0.1:9090 DIST=dist DATABASE=sudoku-3m.csv'
+	  'Options: ADDR=127.0.0.1:9090 DIST=dist DATABASE=sudoku-3m.csv WORKERS=8 LIMIT=10000'
 
 run:
-	$(GO) run .
+	$(GO) run . -database "$(DATABASE)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
+
+benchmark:
+	$(GO) run . -benchmark -database "$(DATABASE)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
 
 web:
 	$(GO) run ./cmd/web -addr "$(ADDR)" -database "$(DATABASE)"
@@ -50,4 +56,4 @@ vet:
 check: test vet
 
 fmt:
-	gofmt -w main.go cli.go cmd internal solver web
+	gofmt -w main.go cli.go benchmark.go benchmark_test.go cmd internal solver web

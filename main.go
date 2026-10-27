@@ -2,42 +2,43 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log/slog"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/s-threepio/godoku/solver"
 )
 
 func main() {
-	file, err := os.Open("sudoku-3m.csv")
-	if err != nil {
-		slog.Error("readfile err", slog.Any("error", err))
+	workers := flag.Int("workers", runtime.GOMAXPROCS(0), "number of benchmark workers")
+	benchmark := flag.Bool("benchmark", false, "benchmark the database and exit without the menu")
+	database := flag.String("database", "sudoku-3m.csv", "puzzle CSV path")
+	limit := flag.Int("limit", 0, "benchmark only the first N puzzle records (0 = all)")
+	flag.Parse()
+	if err := validateBenchmarkOptions(*workers, *limit); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	if flag.NArg() != 0 {
+		fmt.Fprintln(os.Stderr, "unexpected arguments; use -help for available flags")
+		os.Exit(2)
+	}
+	if *benchmark {
+		if err := runBenchmark(*database, *workers, *limit, os.Stdout); err != nil {
+			slog.Error("benchmark failed", slog.Any("error", err))
+			os.Exit(1)
+		}
 		return
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	// Database loading is only needed for random interactive puzzles. Benchmark
+	// mode streams records separately instead of retaining the full CSV.
 	var puzzles []solver.Puzzle
-
-	for scanner.Scan() {
-		appendPuzzle(&puzzles, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		slog.Error("error reading puzzles", slog.Any("error", err))
-		return
-	}
-
-	if len(puzzles) == 0 {
-		fmt.Println("No puzzles found.")
-		return
-	}
-
 	reader := bufio.NewReader(os.Stdin)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -69,6 +70,13 @@ func main() {
 			solveInteractively(s, reader)
 
 		case "2":
+			if len(puzzles) == 0 {
+				puzzles, err = loadPuzzles(*database)
+				if err != nil {
+					fmt.Println("Cannot load database:", err)
+					continue
+				}
+			}
 			puzzle := puzzles[rng.Intn(len(puzzles))]
 			fmt.Printf("\nPuzzle ID: %s | Difficulty: %s\n",
 				puzzle.Id, puzzle.Difficulty)
@@ -81,7 +89,9 @@ func main() {
 			solveInteractively(s, reader)
 
 		case "3":
-			runBenchmark(puzzles)
+			if err := runBenchmark(*database, *workers, *limit, os.Stdout); err != nil {
+				fmt.Println("Benchmark failed:", err)
+			}
 
 		case "0":
 			return
@@ -90,6 +100,26 @@ func main() {
 			fmt.Println("Invalid option. Choose 0, 1, 2, or 3.")
 		}
 	}
+}
+
+func loadPuzzles(path string) ([]solver.Puzzle, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var puzzles []solver.Puzzle
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		appendPuzzle(&puzzles, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if len(puzzles) == 0 {
+		return nil, fmt.Errorf("no puzzles found in %s", path)
+	}
+	return puzzles, nil
 }
 
 func readSudoku(reader *bufio.Reader) (solver.Puzzle, bool) {
@@ -142,105 +172,6 @@ func readSudoku(reader *bufio.Reader) (solver.Puzzle, bool) {
 		Puzzle:     puzzleString,
 		Difficulty: "custom",
 	}, true
-}
-
-type BenchmarkStats struct {
-	Attempted atomic.Int64
-	Solved    atomic.Int64
-}
-
-func runBenchmark(puzzles []solver.Puzzle) {
-	const reportInterval = 5 * time.Second
-
-	var stats BenchmarkStats
-	start := time.Now()
-	stop := make(chan struct{})
-	reporterDone := make(chan struct{})
-
-	fmt.Println("\nGodoku — Database Benchmark")
-	fmt.Println(strings.Repeat("─", 64))
-
-	go func() {
-		defer close(reporterDone)
-		ticker := time.NewTicker(reportInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				printBenchmarkProgress(&stats, len(puzzles), start)
-			case <-stop:
-				return
-			}
-		}
-	}()
-
-	for _, puzzle := range puzzles {
-		if len(puzzle.Puzzle) != 81 {
-			continue
-		}
-		s, err := solver.NewSudoku(puzzle)
-		if err != nil {
-			continue
-		}
-		s.SolveAutomatically()
-
-		stats.Attempted.Add(1)
-		if s.IsSolved() {
-			stats.Solved.Add(1)
-		}
-	}
-
-	close(stop)
-	<-reporterDone
-
-	printBenchmarkSummary(&stats, len(puzzles), start)
-}
-
-func printBenchmarkProgress(stats *BenchmarkStats, total int, start time.Time) {
-	attempted := stats.Attempted.Load()
-	solved := stats.Solved.Load()
-	elapsed := time.Since(start)
-
-	progress := percentage(attempted, int64(total))
-	solveRate := percentage(solved, attempted)
-	rate := float64(attempted) / max(elapsed.Seconds(), 0.001)
-
-	remaining := int64(total) - attempted
-	eta := time.Duration(0)
-	if rate > 0 {
-		eta = time.Duration(float64(remaining)/rate) * time.Second
-	}
-
-	fmt.Printf("\033[H\033[2J")
-	fmt.Println("Godoku — Database Benchmark")
-	fmt.Println(strings.Repeat("─", 64))
-	fmt.Printf("Progress   %s %6.2f%%  (%d / %d)\n",
-		progressBar(progress, 24), progress, attempted, total)
-	fmt.Printf("Solved     %-10d Unsolved     %d\n",
-		solved, attempted-solved)
-	fmt.Printf("Solve rate %-10s Throughput   %.1f puzzles/sec\n",
-		fmt.Sprintf("%.2f%%", solveRate), rate)
-	fmt.Printf("Elapsed    %-10s ETA          %s\n",
-		formatDuration(elapsed), formatDuration(eta))
-	fmt.Println(strings.Repeat("─", 64))
-}
-
-func printBenchmarkSummary(stats *BenchmarkStats, total int, start time.Time) {
-	attempted := stats.Attempted.Load()
-	solved := stats.Solved.Load()
-	elapsed := time.Since(start)
-
-	fmt.Printf("\nBenchmark complete\n")
-	fmt.Println(strings.Repeat("─", 40))
-	fmt.Printf("Total puzzles : %d\n", total)
-	fmt.Printf("Attempted     : %d\n", attempted)
-	fmt.Printf("Solved        : %d\n", solved)
-	fmt.Printf("Unsolved      : %d\n", attempted-solved)
-	fmt.Printf("Solve rate    : %.2f%%\n", percentage(solved, attempted))
-	fmt.Printf("Elapsed       : %s\n", formatDuration(elapsed))
-	fmt.Printf("Throughput    : %.2f puzzles/sec\n",
-		float64(attempted)/max(elapsed.Seconds(), 0.001))
 }
 
 func percentage(numerator, denominator int64) float64 {

@@ -17,6 +17,7 @@ Run `make` to list the available commands. Go remains the only build dependency;
 | `make preview` | Same as `make dev`; always rebuilds before serving |
 | `make web` | Run the local Go HTTP API and website |
 | `make run` | Run the terminal app and its benchmark menu |
+| `make benchmark WORKERS=8` | Benchmark the entire CSV with 8 workers |
 | `make check` | Run tests and `go vet` |
 | `make race` | Run tests with the race detector |
 | `make fmt` | Format Go source |
@@ -35,6 +36,51 @@ make build DIST=dist
 
 For Cloudflare Git integration, the build command can be `make build`, with
 output directory `dist`. The existing `go run ./cmd/buildweb` command also works.
+
+## Terminal benchmark
+
+Run the full database directly, without entering the menu:
+
+```sh
+go run . -benchmark -workers 8
+# Equivalent:
+make benchmark WORKERS=8
+```
+
+For a quick run, process only the first 10,000 puzzle records:
+
+```sh
+go run . -benchmark -workers 8 -limit 10000
+make benchmark WORKERS=8 LIMIT=10000
+```
+
+Flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `-workers N` | Number of concurrent solver goroutines; defaults to `runtime.GOMAXPROCS(0)` |
+| `-benchmark` | Run the benchmark and exit |
+| `-database PATH` | CSV path; defaults to `sudoku-3m.csv` |
+| `-limit N` | Process the first N data records; `0` means the whole file |
+
+`go run . -workers 8` still opens the terminal menu; option **3** uses those
+workers and the same streaming benchmark. `make run WORKERS=8` also works.
+Workers must be positive; limits cannot be negative.
+
+The benchmark counts selected records first, then streams them through a
+bounded worker queue. It does not load the 3-million-puzzle dataset into memory.
+Each worker has its own Sudoku state and uses `SolveAutomatically()` without
+allocating a step history. One goroutine collects results and updates progress
+every five seconds, including throughput and ETA.
+
+The final summary reports solved, unsolved, and invalid records separately.
+**Solve rate = solved / processed × 100**; invalid records are included in the
+denominator. A complete run with no limit therefore gives the percentage
+solved from the entire CSV. Headers and blank CSV lines are excluded. Malformed
+CSV syntax or read errors stop the run rather than silently skipping data.
+Press **Ctrl+C** to stop early and print a partial summary; its solve rate
+applies only to the processed records. Elapsed time and throughput measure the
+solving pass, excluding the initial counting pass.
 
 ## Static Go WebAssembly build (Cloudflare Pages)
 
@@ -125,7 +171,8 @@ the board or candidates **before** returning its explanation.
 - `solver/history.go`: an initial snapshot followed by the state after each
   step. Both the board and candidates are copied. A UI can display any entry
   by index without solving again.
-- `main.go` and `cli.go`: database loading, menu, terminal rendering, and
+- `main.go`, `benchmark.go`, and `cli.go`: database loading, menu, concurrent
+  CSV benchmarking, terminal rendering, and
   pausing between steps. The solver package has no terminal dependencies.
 
 ## Using the solver
