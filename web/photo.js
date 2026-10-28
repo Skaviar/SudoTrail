@@ -6,46 +6,47 @@
   const dialog = $('photo-dialog');
   const canvas = $('photo-canvas');
   const context = canvas.getContext('2d');
-  const labels = ['Top left', 'Top right', 'Bottom right', 'Bottom left'];
   let image = null, corners = [], drag = -1, running = false, loading = false, revision = 0;
   let worker = null, values = Array(81).fill(0);
-  const review = [], coordinateInputs = [];
+  const review = [];
   let enginePromise;
 
   function status(text, kind = '') { $('photo-status').textContent = text; $('photo-status').className = `message ${kind}`; }
   function controls() {
     $('photo-read').disabled = !image || running || loading;
-    $('photo-use').disabled = running || loading;
+    $('photo-use').disabled = running || loading || !values.some(Boolean);
+    $('photo-adjust').disabled = running || loading;
     $('photo-rotate').disabled = running || loading;
     $('photo-file').disabled = $('photo-camera').disabled = running || loading;
-    for (const pair of coordinateInputs) for (const input of pair) input.disabled = running || loading;
+    for (const { input } of review) input.readOnly = running || loading;
   }
-  function invalidate() { revision++; $('photo-review').hidden = $('photo-use').hidden = true; }
-  function syncCoordinates() {
-    corners.forEach((p, i) => { coordinateInputs[i][0].value = Math.round(p.x / canvas.width * 1000) / 10; coordinateInputs[i][1].value = Math.round(p.y / canvas.height * 1000) / 10; });
+  function setReviewing(ready) {
+    dialog.classList.toggle('has-review', ready);
+    $('photo-review').hidden = $('photo-use').hidden = $('photo-preview').hidden = $('photo-adjust').hidden = !ready;
+    $('photo-title').textContent = ready ? 'Check the clues' : 'Import a Sudoku photo';
   }
-  for (let i = 0; i < 4; i++) {
-    const label = document.createElement('label'), title = document.createElement('span'); title.textContent = labels[i]; label.append(title);
-    const pair = [];
-    for (const axis of ['x', 'y']) {
-      const input = document.createElement('input'); input.type = 'number'; input.min = 0; input.max = 100; input.step = .1;
-      input.setAttribute('aria-label', `${labels[i]} ${axis} percent`);
-      input.addEventListener('input', () => {
-        if (!image || running || loading) return;
-        corners[i][axis] = Math.max(0, Math.min(100, Number(input.value))) / 100 * (axis === 'x' ? canvas.width : canvas.height);
-        invalidate(); draw();
-      });
-      label.append(document.createTextNode(axis.toUpperCase()), input); pair.push(input);
-    }
-    coordinateInputs.push(pair); $('photo-corners').append(label);
-  }
+  function invalidate() { revision++; setReviewing(false); }
   for (let i = 0; i < 81; i++) {
     const cell = document.createElement('div'); cell.className = 'cell';
     const input = document.createElement('input'); input.type = 'text'; input.inputMode = 'numeric'; input.autocomplete = 'off';
     input.setAttribute('aria-label', `Detected row ${Math.floor(i / 9) + 1}, column ${i % 9 + 1}`);
     input.addEventListener('focus', () => input.select());
-    input.addEventListener('input', () => { const digit = input.value.replace(/[^1-9]/g, '').at(-1); values[i] = digit ? Number(digit) : 0; input.value = digit || ''; cell.classList.remove('uncertain'); reviewConflicts(); });
-    input.addEventListener('keydown', event => { if (['Backspace', 'Delete', '0'].includes(event.key)) { event.preventDefault(); input.value = ''; input.dispatchEvent(new Event('input')); } });
+    input.addEventListener('input', event => {
+      if (running || loading || event.isComposing) return;
+      const enteredDigit = /[1-9]/.test(event.data ?? input.value);
+      const wasFocused = document.activeElement === input;
+      const insertedText = event.inputType?.startsWith('insert') || event.data != null;
+      if (wasFocused && insertedText && !enteredDigit) {
+        input.value = values[i] || '';
+        focusNextEmptyCell(i, values, review);
+        return;
+      }
+      const digit = input.value.replace(/[^1-9]/g, '').at(-1);
+      values[i] = digit ? Number(digit) : 0; input.value = digit || '';
+      cell.classList.remove('uncertain'); reviewConflicts();
+      if (digit && enteredDigit && wasFocused) focusNextEmptyCell(i, values, review);
+    });
+    input.addEventListener('keydown', event => handleGridKey(event, i, review, values, !running && !loading));
     cell.append(input); $('photo-review-grid').append(cell); review.push({ cell, input });
   }
   function reviewConflicts() {
@@ -62,7 +63,7 @@
     }
     review.forEach(({ cell, input }, i) => { cell.classList.toggle('conflict', conflicts.has(i)); input.setAttribute('aria-invalid', String(conflicts.has(i))); });
     const count = values.filter(Boolean).length;
-    $('photo-review-status').textContent = `${count} clues detected. ${conflicts.size ? `${conflicts.size} cells conflict; correct these before solving.` : 'Check every digit against the photo, including blanks.'}`;
+    $('photo-review-status').textContent = `${count} clues · ${conflicts.size ? `${conflicts.size} conflicting cells` : 'No conflicts'}`;
     $('photo-use').disabled = count === 0;
   }
   function draw() {
@@ -94,9 +95,9 @@
     if (running || loading || !image) return;
     const p = pointer(event);
     drag = corners.reduce((best, corner, i) => Math.hypot(corner.x - p.x, corner.y - p.y) < Math.hypot(corners[best].x - p.x, corners[best].y - p.y) ? i : best, 0);
-    canvas.setPointerCapture(event.pointerId); corners[drag] = p; invalidate(); syncCoordinates(); draw();
+    canvas.setPointerCapture(event.pointerId); corners[drag] = p; invalidate(); draw();
   });
-  canvas.addEventListener('pointermove', event => { if (drag < 0 || running) return; corners[drag] = pointer(event); syncCoordinates(); draw(); });
+  canvas.addEventListener('pointermove', event => { if (drag < 0 || running) return; corners[drag] = pointer(event); draw(); });
   for (const type of ['pointerup', 'pointercancel']) canvas.addEventListener(type, () => { drag = -1; });
 
   async function load(file) {
@@ -113,7 +114,7 @@
       source.getContext('2d').drawImage(bitmap, 0, 0, source.width, source.height); image = source;
       canvas.width = source.width; canvas.height = source.height;
       corners = [{ x: 0, y: 0 }, { x: canvas.width, y: 0 }, { x: canvas.width, y: canvas.height }, { x: 0, y: canvas.height }];
-      invalidate(); syncCoordinates(); draw(); controls(); $('photo-editor').hidden = false;
+      invalidate(); draw(); controls(); $('photo-editor').hidden = false;
       status('Align all four corners with the outer grid border, then read the grid.');
     } catch { status('This photo could not be opened. Try a JPEG, PNG, or WebP image.', 'error'); }
     finally { bitmap?.close(); loading = false; controls(); }
@@ -129,7 +130,12 @@
     const rotated = document.createElement('canvas'); rotated.width = image.height; rotated.height = image.width;
     const ctx = rotated.getContext('2d'); ctx.translate(rotated.width, 0); ctx.rotate(Math.PI / 2); ctx.drawImage(image, 0, 0);
     corners = [corners[3], corners[0], corners[1], corners[2]].map(p => ({ x: image.height - p.y, y: p.x }));
-    image = rotated; canvas.width = image.width; canvas.height = image.height; invalidate(); syncCoordinates(); draw();
+    image = rotated; canvas.width = image.width; canvas.height = image.height; invalidate(); draw();
+  });
+  $('photo-adjust').addEventListener('click', () => {
+    if (running || loading) return;
+    invalidate(); draw();
+    status('Adjust the corners, then read the grid again.');
   });
 
   // Map a unit square onto the selected quadrilateral by solving eight equations.
@@ -250,10 +256,11 @@
       if (token !== revision) return;
       values = detected;
       review.forEach(({ cell, input }, i) => { input.value = values[i] || ''; cell.classList.toggle('uncertain', uncertain.has(i)); });
-      $('photo-review').hidden = $('photo-use').hidden = false;
+      $('photo-preview').src = grid.toDataURL('image/jpeg', .92);
+      setReviewing(true);
       reviewConflicts();
       status(values.some(Boolean) ? 'Ready for review. Recognition can make mistakes; compare all clues before importing.' : 'No digits were recognized. Try a clearer photo or adjust the grid corners.', values.some(Boolean) ? '' : 'error');
-      $('photo-review').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      dialog.scrollTop = 0;
     } catch (error) { if (token === revision) status(error.message || 'Could not read this photo. Please try another image.', 'error'); }
     finally {
       if (active) { try { await active.terminate(); } catch {} }
@@ -266,6 +273,8 @@
   dialog.addEventListener('close', () => { revision++; running = false; if (worker) { worker.terminate().catch(() => {}); worker = null; } $('photo-progress').hidden = true; controls(); });
   $('photo-use').addEventListener('click', () => {
     if (running || !values.some(Boolean)) return;
-    document.dispatchEvent(new CustomEvent('godoku:photo-import', { detail: { values: [...values] } })); dialog.close();
+    const detail = { values: [...values], image: $('photo-preview').src };
+    dialog.close();
+    document.dispatchEvent(new CustomEvent('godoku:photo-import', { detail }));
   });
 })();

@@ -7,6 +7,8 @@ let original = Array(81).fill(0);
 // Preserve puzzle provenance separately from the editable submission.
 // null means a custom puzzle is still being entered.
 let givenClues = null;
+let transcribing = true;
+let referencePhoto = '';
 let states = [];
 let current = 0;
 let busy = false;
@@ -31,7 +33,7 @@ for (let index = 0; index < 81; index++) {
     const enteredDigit = /[1-9]/.test(event.data ?? input.value);
     const wasFocused = document.activeElement === input;
     const insertedText = event.inputType?.startsWith('insert') || event.data != null;
-    if (givenClues === null && wasFocused && insertedText && !enteredDigit) {
+    if (transcribing && wasFocused && insertedText && !enteredDigit) {
       input.value = original[index] || '';
       focusNextEmptyCell(index);
       return;
@@ -42,28 +44,10 @@ for (let index = 0; index < 81; index++) {
     $('issues').hidden = true;
     message('');
     render();
-    if (givenClues === null && digits && enteredDigit && wasFocused) focusNextEmptyCell(index);
+    if (transcribing && digits && enteredDigit && wasFocused) focusNextEmptyCell(index);
   });
   input.addEventListener('keydown', event => {
-    // During initial transcription, non-digit typing means an empty square.
-    // Preserve navigation, deletion, shortcuts and IME composition.
-    const initialEntry = givenClues === null && !busy && !solvePending && !states.length && !input.readOnly;
-    if (initialEntry && !event.isComposing && !event.ctrlKey && !event.metaKey && !event.altKey &&
-        (event.key === 'Enter' || (event.key.length === 1 && !/^[1-9]$/.test(event.key)))) {
-      event.preventDefault();
-      focusNextEmptyCell(index);
-      return;
-    }
-    const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -9, ArrowDown: 9 };
-    if (Object.hasOwn(offsets, event.key)) {
-      event.preventDefault();
-      cells[Math.max(0, Math.min(80, index + offsets[event.key]))].input.focus();
-    }
-    if (!input.readOnly && (event.key === 'Delete' || event.key === 'Backspace' || event.key === '0')) {
-      event.preventDefault();
-      input.value = '';
-      input.dispatchEvent(new Event('input'));
-    }
+    handleGridKey(event, index, cells, original, transcribing && !busy && !solvePending && !states.length);
   });
   input.addEventListener('focus', () => input.select());
   const marks = document.createElement('div');
@@ -76,13 +60,35 @@ for (let index = 0; index < 81; index++) {
 
 // Advance in reading order, skipping every filled cell. Wrap to earlier blanks
 // so entering a puzzle out of order still works; a full board keeps focus.
-function focusNextEmptyCell(index) {
-  for (let offset = 1; offset < 81; offset++) {
-    const next = (index + offset) % 81;
-    if (original[next] === 0) {
-      cells[next].input.focus();
+function focusNextEmptyCell(index, values = original, entries = cells) {
+  for (let offset = 1; offset < entries.length; offset++) {
+    const next = (index + offset) % entries.length;
+    if (values[next] === 0) {
+      entries[next].input.focus();
       return;
     }
+  }
+}
+
+// Manual entry and photo review share navigation, skipping, and deletion.
+function handleGridKey(event, index, entries, values, advance) {
+  if (event.isComposing) return;
+  const input = entries[index].input;
+  if (advance && !input.readOnly && !event.ctrlKey && !event.metaKey && !event.altKey &&
+      (event.key === 'Enter' || (event.key.length === 1 && !/^[1-9]$/.test(event.key)))) {
+    event.preventDefault();
+    focusNextEmptyCell(index, values, entries);
+    return;
+  }
+  const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -9, ArrowDown: 9 };
+  if (Object.hasOwn(offsets, event.key)) {
+    event.preventDefault();
+    entries[Math.max(0, Math.min(entries.length - 1, index + offsets[event.key]))].input.focus();
+  }
+  if (!input.readOnly && ['Delete', 'Backspace', '0'].includes(event.key)) {
+    event.preventDefault();
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
   }
 }
 
@@ -111,6 +117,9 @@ function render() {
   document.body.classList.toggle('puzzle-loaded', loaded);
   $('guides-option').hidden = $('candidates-option').hidden = !loaded;
   $('random').hidden = $('import-photo').hidden = loaded;
+  const showPhoto = !!referencePhoto && !state;
+  $('photo-reference').hidden = !showPhoto;
+  document.body.classList.toggle('photo-entry', showPhoto);
   if (enteringPlayback && window.matchMedia('(max-width: 800px)').matches) {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }
@@ -140,7 +149,7 @@ function render() {
   $('explanation').hidden = !state;
   $('edit').hidden = !state;
   $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Enter a puzzle';
-  $('board-hint').hidden = !!state || givenClues !== null;
+  $('board-hint').hidden = !!state || !transcribing;
   $('board-hint').textContent = 'Type 1–9 for clues; 0, space or another character skips a blank.';
   $('step-count').textContent = state ? `${states.length - 1} steps` : '';
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
@@ -199,6 +208,7 @@ $('validate').addEventListener('click', () => perform(async () => {
   message(result.valid ? 'No conflicts found.' : 'Fix the highlighted cells.', result.valid ? 'success' : 'error');
 }));
 $('solve').addEventListener('click', () => perform(async () => {
+  transcribing = false;
   const result = await api('/api/solve', puzzleString());
   if (givenClues === null) givenClues = [...original];
   showIssues([]); states = result.states; current = 0;
@@ -208,12 +218,14 @@ $('random').addEventListener('click', () => perform(async () => {
   const result = await api('/api/puzzles/random');
   original = [...result.puzzle].map(ch => /[1-9]/.test(ch) ? Number(ch) : 0);
   givenClues = [...original];
+  transcribing = false; referencePhoto = ''; $('reference-image').removeAttribute('src');
   states = []; current = 0; showIssues([]);
   puzzleLabel = `Puzzle #${result.id}${result.difficulty ? ` · Difficulty ${result.difficulty}` : ''}`;
   message('');
 }));
 $('clear').addEventListener('click', () => {
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
+  transcribing = true; referencePhoto = ''; $('reference-image').removeAttribute('src');
   message(''); render(); cells[0].input.focus();
 });
 $('edit').addEventListener('click', () => { states = []; current = 0; showIssues([]); message(''); render(); });
@@ -392,10 +404,14 @@ document.addEventListener('godoku:photo-import', event => {
   if (busy) return;
   original = [...event.detail.values];
   givenClues = [...original];
+  transcribing = true; referencePhoto = event.detail.image || '';
+  if (referencePhoto) $('reference-image').src = referencePhoto;
+  else $('reference-image').removeAttribute('src');
   states = []; current = 0; puzzleLabel = 'Puzzle from your photo';
   showIssues([]);
   message('Photo imported. Check the clues, then validate.');
   render();
+  cells[Math.max(0, original.findIndex(value => !value))].input.focus();
 });
 
 // On phones, keep the explanation compact while navigation remains in reach.

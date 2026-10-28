@@ -216,7 +216,7 @@ go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
 
 Open `http://127.0.0.1:8080` in a browser. The interface supports:
 
-- Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random/photo puzzles, editing after a solve, and solution playback do not auto-advance.
+- Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual or photo puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random puzzles, editing after a solve, and solution playback do not auto-advance.
 - Validating clues and highlighting conflicting cells.
 - Loading a random database puzzle.
 - Solving and exploring history using Previous/Next, First/Last, or a slider.
@@ -320,16 +320,19 @@ camera picker. The browser decodes the photo locally; images are not uploaded
 to the Go API or an OCR service.
 
 1. Rotate the photo if needed, then drag handles 1–4 clockwise to the outer grid
-   corners (top left, top right, bottom right, bottom left). Percentage fields
-   offer an accessible alternative to dragging. The guide lines should match
-   all nine rows and columns.
+   corners (top left, top right, bottom right, bottom left). The guide lines
+   should match all nine rows and columns.
 2. Choose **Read the grid**. Perspective correction straightens the selected
    grid, grid-line trimming and connected components isolate printed digits,
    and Tesseract.js reads nonempty cells.
-3. Review the detected 9×9 board against the photo. Amber means uncertain or
+3. Review the detected 9×9 board beside the straightened photo, or below it on
+   phones. Crop controls are hidden during review; **Adjust crop** returns to
+   them. Amber means uncertain or
    unreadable; red indicates duplicate clues. Edit or clear any cell, and check
    blanks for missed digits. Choose **Use this puzzle** when ready.
-4. The main board remains editable. Validate before solving.
+4. The photo remains visible alongside the editable main board (above it on
+   phones). Both review and initial photo entry advance to the next blank when
+   you type a digit. Validate before solving; Solve ends automatic advancing.
 
 Recognition targets clear, printed, upright 9×9 puzzles. Handwriting, tiny
 pencil marks, blur, strong shadows, cropped digits, and incorrect corner

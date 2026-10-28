@@ -9,6 +9,9 @@
 <header><a class="brand" href="/" aria-label="Godoku home"><span class="brand-mark" aria-hidden="true">▦</span> godoku<span class="brand-dot">.</span></a></header>
 <main>
 <div class="workspace">
+<aside id="photo-reference" class="photo-reference" aria-label="Puzzle reference photo" hidden>
+<h2 class="board-title">Photo</h2><img id="reference-image" alt="Imported Sudoku grid for checking the clues">
+</aside>
 <section class="board-panel" aria-label="Sudoku workspace">
 <h2 id="board-title" class="board-title">Enter a puzzle</h2>
 <div class="board-toolbar" role="group" aria-label="Puzzle controls">
@@ -39,9 +42,11 @@
 <div class="photo-heading"><div><h2 id="photo-title">Import a Sudoku photo</h2></div><button id="photo-close" class="nav-button" aria-label="Close photo import">×</button></div>
 <p class="photo-description">Choose a clear photo of a printed puzzle. Your image stays in this browser.</p>
 <div class="photo-picker"><label class="button secondary" for="photo-file">Choose photo</label><input id="photo-file" type="file" accept="image/*" hidden><label class="button secondary" for="photo-camera">Take photo</label><input id="photo-camera" type="file" accept="image/*" capture="environment" hidden></div>
-<div id="photo-editor" hidden><p id="photo-instructions" class="photo-help">Drag the four handles to the outer corners of the Sudoku grid. Keep the top of the puzzle facing up.</p><div class="photo-canvas-wrap"><canvas id="photo-canvas" aria-label="Photo with adjustable Sudoku grid corners"></canvas></div><fieldset id="photo-corners" class="photo-corners"><legend>Corner positions (% of photo) · use these fields for precise alignment</legend></fieldset><button id="photo-rotate" class="button quiet">Rotate photo ↻</button></div>
+<div class="photo-workspace">
+<div id="photo-editor" hidden><p id="photo-instructions" class="photo-help">Drag the four handles to the outer corners of the Sudoku grid. Keep the top of the puzzle facing up.</p><div class="photo-canvas-wrap"><canvas id="photo-canvas" aria-label="Photo with adjustable Sudoku grid corners"></canvas><img id="photo-preview" alt="Straightened photo of your Sudoku grid" hidden></div><button id="photo-rotate" class="button quiet">Rotate photo ↻</button></div>
+<div id="photo-review" hidden><p class="photo-help">Check clues and blanks; amber needs attention. Typing advances; 0 or space skips.</p><div id="photo-review-grid" class="board photo-review-grid" aria-label="Editable detected puzzle"></div><p id="photo-review-status" class="message" role="status"></p></div>
+</div>
 <p id="photo-status" class="message" role="status" aria-live="polite">A straight, well-lit photo works best. Handwriting and pencil notes may need corrections.</p><progress id="photo-progress" max="81" value="0" hidden aria-label="Digit recognition progress"></progress>
-<div id="photo-review" hidden><h3>Check the detected clues</h3><p class="photo-help">Compare with the photo above. Amber cells need attention. Tap any cell to correct or clear it; check blank cells too.</p><div id="photo-review-grid" class="board photo-review-grid" aria-label="Editable detected puzzle"></div><p id="photo-review-status" class="message" role="status"></p></div>
-<div class="photo-actions"><button id="photo-read" class="button primary" disabled>Read the grid</button><button id="photo-use" class="button primary" hidden>Use this puzzle →</button></div>
+<div class="photo-actions"><button id="photo-adjust" class="button secondary" hidden>Adjust crop</button><button id="photo-read" class="button primary" disabled>Read the grid</button><button id="photo-use" class="button primary" hidden>Use this puzzle →</button></div>
 </dialog>
 </body></html>
