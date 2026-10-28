@@ -2,15 +2,18 @@ package solver
 
 // BoardState is a snapshot of the Sudoku board and its candidates.
 type BoardState struct {
-	pending    candidateUpdate
-	Board      [9][9]int8
-	Candidates [9][9]uint16
+	initialBoard [9][9]int8
+	initialKnown bool
+	pending      candidateUpdate
+	Board        [9][9]int8
+	Candidates   [9][9]uint16
 }
 
 // CaptureBoardState copies the current solver state.
 // Arrays are copied by value, so later solver changes won't affect the snapshot.
 func CaptureBoardState(s *Sudoku) BoardState {
 	return BoardState{
+		initialBoard: s.initialBoard, initialKnown: s.initialKnown,
 		pending:    s.pending,
 		Board:      s.Board,
 		Candidates: s.Candidates,
@@ -19,6 +22,12 @@ func CaptureBoardState(s *Sudoku) BoardState {
 
 // Restore copies a saved snapshot back into a Sudoku solver.
 func (state BoardState) Restore(s *Sudoku) {
+	// The uniqueness cache belongs to these original clues, not the current
+	// candidates. Discard it when restoring a different puzzle.
+	if s.initialKnown != state.initialKnown || s.initialBoard != state.initialBoard {
+		s.uniqueness = 0
+	}
+	s.initialBoard, s.initialKnown = state.initialBoard, state.initialKnown
 	s.pending = state.pending
 	s.deferPeerUpdates = false
 	s.Board = state.Board
@@ -54,6 +63,7 @@ func NewSolverHistory(s *Sudoku) *SolverHistory {
 func (h *SolverHistory) RecordStep(s *Sudoku, step Step) {
 	if step.Visual != nil {
 		visual := *step.Visual
+		visual.Highlights = append([]CandidateHighlight(nil), visual.Highlights...)
 		visual.CandidateLinks = append([]CandidateLink(nil), visual.CandidateLinks...)
 		visual.Links = append([]VisualLink(nil), visual.Links...)
 		visual.Restrictions = append([]CandidateElimination(nil), visual.Restrictions...)

@@ -4,12 +4,13 @@ import "fmt"
 
 // ApplyBasicFish reserves N columns for N rows, or N rows for N columns,
 // considering one digit at a time. Sizes 2, 3, and 4 are X-Wing, Swordfish,
-// and Jellyfish. Intersections need not all contain the digit.
+// and Jellyfish; sizes 5–7 are Squirmbag, Whale, and Leviathan.
+// Intersections need not all contain the digit.
 func ApplyBasicFish(s *Sudoku, size int) (Step, bool) {
-	if size < 2 || size > 4 {
+	if size < 2 || size > 7 {
 		return Step{}, false
 	}
-	technique := map[int]string{2: "X-Wing", 3: "Swordfish", 4: "Jellyfish"}[size]
+	technique := map[int]string{2: "X-Wing", 3: "Swordfish", 4: "Jellyfish", 5: "Squirmbag", 6: "Whale", 7: "Leviathan"}[size]
 	units := allUnits()
 	for number := 1; number <= 9; number++ {
 		for direction := range 2 {

@@ -82,6 +82,11 @@ Press **Ctrl+C** to stop early and print a partial summary; its solve rate
 applies only to the processed records. Elapsed time and throughput measure the
 solving pass, excluding the initial counting pass.
 
+All solves use logical techniques. Backtracking is used only to check whether
+the original puzzle has exactly one solution, as required by uniqueness
+techniques. It never supplies placements or candidate eliminations. When the
+available techniques cannot advance a puzzle, it remains unsolved.
+
 ## Static Go WebAssembly build (Cloudflare Pages)
 
 The website can run entirely in the browser: the Go solver compiles to
@@ -304,6 +309,9 @@ supporting the deduction), `links` (exact `from`, `to`, `number`, and shared
 `restrictions` (already excluded candidates), and `units` (`kind`: `row`, `column`, or `box`, plus a
 zero-based `index`). These fields are recorded by the techniques themselves;
 the UI does not infer evidence from explanation strings.
+Optional `highlights` identify a candidate by `row`, `col`, `number`, and `role`:
+`fin` (amber), `color-a` (blue), or `color-b` (purple). These are copied into
+history and cleared when guides are disabled or another step is selected.
 
 ### Importing a Sudoku photo
 
@@ -393,6 +401,47 @@ known puzzle solutions, and independently enumerated single-digit placements.
 Definitions: [basic fish](https://hodoku.sourceforge.net/en/tech_fishb.php),
 [wings](https://hodoku.sourceforge.net/en/tech_wings.php), and
 [single-digit patterns](https://hodoku.sourceforge.net/en/tech_sdp.php).
+
+### Additional fish, coloring, and uniqueness
+
+The next logical group runs after the existing techniques, in this order:
+
+1. **Finned/Sashimi X-Wing** (`solver/finned_fish.go`): an X-Wing with uncovered
+   candidates (fins). A missing corner makes it Sashimi. Only cover candidates
+   outside the base units that see every fin can be removed. Fins are amber.
+2. **Remote Pairs** (`solver/coloring.go`): connected identical two-candidate
+   cells must alternate values. Cells seeing opposite assignments lose the pair
+   digits. Both candidates have explicit opposite color markings.
+3. **Simple Coloring** (`solver/coloring.go`): conjugate pairs create alternate
+   color assignments for one digit. Color Trap removes an outside candidate
+   seeing both colors. Color Wrap removes a whole color when two candidates
+   of that color share a unit. Contradictory odd-cycle components are skipped.
+4. **Unique Rectangle Types 1–2** (`solver/uniqueness.go`): complete rectangles
+   in exactly two rows, two columns, and two boxes. Type 1 removes the rectangle
+   digits from the sole cell with extra candidates; Type 2 removes the shared
+   extra digit from cells seeing both adjacent extra-candidate cells. Missing
+   candidates and other rectangle types are not part of these detectors.
+5. **BUG+1** (`solver/uniqueness.go`): every empty cell except one is bivalue;
+   the remaining cell is trivalue. Removing its extra candidate must produce
+   exactly two locations per unplaced digit in every unit. That extra digit
+   is placed, followed by a separate peer-elimination step.
+6. **Larger basic fish** (`solver/fish.go`): Squirmbag (size 5), Whale (6), and
+   Leviathan (7), in either orientation, using the existing counting rule.
+
+Uniqueness deductions require proof that the **original submitted clues** have
+exactly one solution. `HasUniqueSolution()` (`solver/uniqueness_check.go`) uses
+backtracking capped at two completions and caches only the uniqueness verdict.
+The check ignores later placements and candidate eliminations and never returns
+a completed board. Multiple-solution and unsatisfiable submissions skip these
+methods. Snapshots preserve original clues when restored.
+
+Backtracking is used only for this uniqueness check. All solving steps come
+from logical techniques; there is no search fallback.
+
+Definitions: [finned fish](https://hodoku.sourceforge.net/en/tech_fishfs.php),
+[coloring](https://hodoku.sourceforge.net/en/tech_col.php),
+[remote pairs](https://hodoku.sourceforge.net/en/tech_chains.php), and
+[uniqueness](https://hodoku.sourceforge.net/en/tech_ur.php).
 
 ### Placement and elimination sequencing
 

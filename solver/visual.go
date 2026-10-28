@@ -5,12 +5,21 @@ import "fmt"
 // StepVisual describes the evidence behind a deduction for a visual renderer.
 // Unit coordinates and cell coordinates are zero-based.
 type StepVisual struct {
+	Highlights     []CandidateHighlight   `json:"highlights,omitempty"`
 	CandidateLinks []CandidateLink        `json:"candidateLinks,omitempty"`
 	Links          []VisualLink           `json:"links,omitempty"`
 	Restrictions   []CandidateElimination `json:"restrictions,omitempty"`
 	Sources        []Cell                 `json:"sources"`
 	Digits         []int                  `json:"digits"`
 	Units          []VisualUnit           `json:"units"`
+}
+
+// Highlights distinguish fins and the two alternate assignments in coloring.
+type CandidateHighlight struct {
+	Row    int    `json:"row"`
+	Col    int    `json:"col"`
+	Number int    `json:"number"`
+	Role   string `json:"role"` // fin, color-a, or color-b
 }
 
 // CandidateLink connects possible digits, rather than already placed numbers.

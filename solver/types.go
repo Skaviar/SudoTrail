@@ -9,6 +9,9 @@ type Puzzle struct {
 }
 
 type Sudoku struct {
+	initialBoard     [9][9]int8
+	initialKnown     bool
+	uniqueness       int8 // 0 = unchecked, 1 = unique, -1 = not unique
 	pending          candidateUpdate
 	deferPeerUpdates bool
 	Board            [9][9]int8

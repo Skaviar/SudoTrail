@@ -37,8 +37,8 @@ func assertPatternStep(t *testing.T, before BoardState, s *Sudoku, step Step, te
 		t.Fatal("candidate changes differ from the reported eliminations")
 	}
 	for _, source := range step.Visual.Sources {
-		if before.Board[source.Row][source.Col] != 0 || s.Candidates[source.Row][source.Col] != before.Candidates[source.Row][source.Col] {
-			t.Fatal("pattern source was filled or altered")
+		if before.Board[source.Row][source.Col] != 0 {
+			t.Fatal("pattern source was already filled")
 		}
 	}
 	units := allUnits()

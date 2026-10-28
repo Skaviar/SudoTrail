@@ -45,7 +45,7 @@ func TestEliminationVisualEvidence(t *testing.T) {
 func TestHistoryOwnsVisualSlices(t *testing.T) {
 	s := &Sudoku{}
 	h := NewSolverHistory(s)
-	step := Step{Visual: &StepVisual{Sources: []Cell{{Row: 1, Col: 2}}, Digits: []int{5}, Units: []VisualUnit{{Kind: "row", Index: 1}}, Links: []VisualLink{{Number: 5}}, CandidateLinks: []CandidateLink{{Number: 5}}, Restrictions: []CandidateElimination{{Number: 5}}}}
+	step := Step{Visual: &StepVisual{Sources: []Cell{{Row: 1, Col: 2}}, Digits: []int{5}, Units: []VisualUnit{{Kind: "row", Index: 1}}, Links: []VisualLink{{Number: 5}}, CandidateLinks: []CandidateLink{{Number: 5}}, Restrictions: []CandidateElimination{{Number: 5}}, Highlights: []CandidateHighlight{{Number: 5}}}}
 	h.RecordStep(s, step)
 	step.Visual.Sources[0].Row = 8
 	step.Visual.Digits[0] = 9
@@ -53,8 +53,9 @@ func TestHistoryOwnsVisualSlices(t *testing.T) {
 	step.Visual.Links[0].Number = 9
 	step.Visual.Restrictions[0].Number = 9
 	step.Visual.CandidateLinks[0].Number = 9
+	step.Visual.Highlights[0].Number = 9
 	visual := h.Entries[1].Step.Visual
-	if visual.Sources[0].Row != 1 || visual.Digits[0] != 5 || visual.Units[0].Index != 1 || visual.Links[0].Number != 5 || visual.Restrictions[0].Number != 5 || visual.CandidateLinks[0].Number != 5 {
+	if visual.Sources[0].Row != 1 || visual.Digits[0] != 5 || visual.Units[0].Index != 1 || visual.Links[0].Number != 5 || visual.Restrictions[0].Number != 5 || visual.CandidateLinks[0].Number != 5 || visual.Highlights[0].Number != 5 {
 		t.Fatal("visual evidence was mutated after recording")
 	}
 }

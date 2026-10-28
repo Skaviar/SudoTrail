@@ -235,6 +235,7 @@ function visualData(state, step) {
   return {
     sources: visual.sources || [], digits: visual.digits || [], units: visual.units || [],
     links: visual.links || [], candidateLinks: visual.candidateLinks || [],
+    highlights: visual.highlights || [],
     restrictions: visual.restrictions || [], targets: step?.eliminations || []
   };
 }
@@ -242,14 +243,14 @@ function renderVisuals(state, step) {
   const overlay = $('deduction-overlay');
   overlay.replaceChildren();
   for (const { cell, marks } of cells) {
-    cell.classList.remove('focus-unit', 'source-cell', 'target-cell');
-    for (const mark of marks.children) mark.classList.remove('evidence');
+    cell.classList.remove('focus-unit', 'source-cell', 'target-cell', 'fin-cell');
+    for (const mark of marks.children) mark.classList.remove('evidence', 'fin', 'color-a', 'color-b');
     // Remove display-only restriction marks before redrawing guides.
     for (const mark of marks.querySelectorAll('[data-propagated]')) { mark.textContent = ''; mark.classList.remove('removed', 'blocked'); delete mark.dataset.propagated; }
   }
   $('visual-summary').hidden = true;
   if (!state || !step || !$('visuals').checked) return;
-  const { sources, digits, units, links, candidateLinks, restrictions, targets } = visualData(state, step);
+  const { sources, digits, units, links, candidateLinks, highlights, restrictions, targets } = visualData(state, step);
   const bounds = board.getBoundingClientRect();
   overlay.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
   const svg = (tag, attributes) => {
@@ -288,6 +289,13 @@ function renderVisuals(state, step) {
       const mark = entry.marks.querySelector(`[data-digit="${digit}"]`);
       if (mark?.textContent && !mark.classList.contains('removed')) mark.classList.add('evidence');
     }
+  }
+  for (const highlight of highlights) {
+    if (!['fin', 'color-a', 'color-b'].includes(highlight.role)) continue;
+    const entry = cellAt(highlight);
+    if (highlight.role === 'fin') entry.cell.classList.add('fin-cell');
+    const mark = entry.marks.querySelector(`[data-digit="${highlight.number}"]`);
+    if (mark?.textContent && !mark.classList.contains('removed')) mark.classList.add(highlight.role);
   }
   // Locked candidates get one clear axis through their source cells.
   if (!step.number && !links.length && !candidateLinks.length && sources.length > 1 && digits.length === 1) {
@@ -373,6 +381,8 @@ function renderVisuals(state, step) {
   if (unitNames.length) text.push(unitNames.join(' + '));
   if (restrictions.length) text.push(`${restrictions.length} alternative${restrictions.length === 1 ? '' : 's'} ruled out`);
   if (targets.length) text.push(`${targets.length} candidate${targets.length === 1 ? '' : 's'} removed`);
+  if (highlights.some(h => h.role === 'fin')) text.push('Amber: fins');
+  if (highlights.some(h => h.role === 'color-a')) text.push('Blue / purple: opposite assignments');
   $('visual-summary').textContent = text.join(' · ');
   $('visual-summary').hidden = !text.length;
 }

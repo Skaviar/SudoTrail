@@ -14,6 +14,7 @@ func NewSudoku(p Puzzle) (*Sudoku, error) {
 		}
 		s.Board[index/9][index%9] = int8(ch - '0')
 	}
+	s.initialBoard, s.initialKnown = s.Board, true
 	s.initializeCandidates()
 	return s, nil
 }

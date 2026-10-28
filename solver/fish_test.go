@@ -135,11 +135,39 @@ func TestFishRejectsTooManyCoversAndInvalidSizes(t *testing.T) {
 			t.Fatalf("size %d accepted too many cover columns", size)
 		}
 	}
-	for _, size := range []int{-1, 0, 1, 5, 9} {
+	for _, size := range []int{-1, 0, 1, 8, 9} {
 		s := fishFixture(2, false)
 		before := CaptureBoardState(s)
 		if _, ok := ApplyBasicFish(s, size); ok || CaptureBoardState(s) != before {
 			t.Fatal("accepted unsupported fish size")
+		}
+	}
+}
+
+func TestLargerBasicFish(t *testing.T) {
+	for size := 5; size <= 7; size++ {
+		for _, transposed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("size=%d/transposed=%v", size, transposed), func(t *testing.T) {
+				s := patternSudoku()
+				for base := 0; base < size; base++ {
+					for cover := size; cover < 9; cover++ {
+						row, col := base, cover
+						if transposed {
+							row, col = col, row
+						}
+						s.Candidates[row][col] = removeCandidate(s.Candidates[row][col], 7)
+					}
+				}
+				before := CaptureBoardState(s)
+				step, ok := ApplyBasicFish(s, size)
+				if !ok {
+					t.Fatal("large basic fish not found")
+				}
+				assertPatternStep(t, before, s, step, map[int]string{5: "Squirmbag", 6: "Whale", 7: "Leviathan"}[size])
+				if len(step.Eliminations) != (9-size)*size {
+					t.Fatal("incorrect large-fish eliminations")
+				}
+			})
 		}
 	}
 }

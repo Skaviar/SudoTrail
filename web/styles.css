@@ -76,6 +76,10 @@ h2 { margin: 0; }
 .candidate-grid { position: absolute; inset: 3px; display: grid; grid-template-columns: repeat(3,1fr); pointer-events: none; font-size: clamp(8px,1vw,11px); color: #7b897e; text-align: center; }
 .candidate-grid span { display: flex; align-items: center; justify-content: center; }
 .candidate-grid .evidence { color: #1b6e62; font-weight: 800; background: #c9e4dc; border-radius: 50%; box-shadow: 0 0 0 1px #73a698; }
+.candidate-grid .fin { color: #8d5900; background: #ffe4ab; box-shadow: 0 0 0 1px #c28c2f; }
+.candidate-grid .color-a { color: #2157a1; background: #dbe8fc; box-shadow: 0 0 0 1px #7496c4; }
+.candidate-grid .color-b { color: #73429b; background: #efdefb; box-shadow: 0 0 0 1px #ac83c7; }
+.cell.fin-cell { background: #fff0cf; }
 .candidate-grid .removed { font-weight: 750; color: #b04736; background: #f8d9cc; text-decoration: line-through; text-decoration-thickness: 2px; border-radius: 3px; }
 .deduction-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
 .guide-unit { fill: none; stroke: #7d9b54; stroke-width: 2; stroke-dasharray: 5 4; opacity: .8; }

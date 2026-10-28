@@ -89,6 +89,29 @@ func (s *Sudoku) applyTechnique() (Step, bool) {
 	if step, ok := ApplyBasicFish(s, 4); ok {
 		return step, true
 	}
+	if step, ok := ApplyFinnedXWing(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyRemotePairs(s); ok {
+		return step, true
+	}
+	if step, ok := ApplySimpleColoring(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyUniqueRectangle(s, 1); ok {
+		return step, true
+	}
+	if step, ok := ApplyUniqueRectangle(s, 2); ok {
+		return step, true
+	}
+	if step, ok := ApplyBUGPlusOne(s); ok {
+		return step, true
+	}
+	for size := 5; size <= 7; size++ {
+		if step, ok := ApplyBasicFish(s, size); ok {
+			return step, true
+		}
+	}
 
 	return Step{}, false
 }
