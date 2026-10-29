@@ -3,18 +3,53 @@
 const $ = id => document.getElementById(id);
 const board = $('board');
 const cells = [];
-let original = Array(81).fill(0);
+const savedSession = window.godokuSession.load();
+let original = savedSession?.original || Array(81).fill(0);
 // Preserve puzzle provenance separately from the editable submission.
 // null means a custom puzzle is still being entered.
-let givenClues = null;
-let transcribing = true;
-let referencePhoto = '';
+let givenClues = savedSession?.givenClues || null;
+let transcribing = savedSession?.transcribing ?? true;
+let referencePhoto = savedSession?.referencePhoto || '';
 let states = [];
 let current = 0;
-let busy = false;
+let restoringStep = savedSession?.reviewing ? savedSession.current : null;
+let busy = restoringStep !== null;
 let solvePending = false;
 let conflicts = new Set();
-let puzzleLabel = '';
+let puzzleLabel = savedSession?.puzzleLabel || '';
+let saveTimer;
+let hasSavedPuzzle = savedSession !== null;
+$('candidates').checked = savedSession?.candidates ?? true;
+$('visuals').checked = savedSession?.guides ?? true;
+if (referencePhoto) $('reference-image').src = referencePhoto;
+
+function scheduleSessionSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSession, 150);
+}
+function saveSession(clearEmpty = false) {
+  clearTimeout(saveTimer);
+  const hasPuzzle = original.some(Boolean) || givenClues !== null || states.length > 0;
+  if (!hasPuzzle && !hasSavedPuzzle && clearEmpty !== true) {
+    $('save-status').hidden = true;
+    return;
+  }
+  const snapshot = hasPuzzle ? {
+    original, givenClues, transcribing, referencePhoto, puzzleLabel,
+    reviewing: states.length > 0 || restoringStep !== null,
+    current: restoringStep ?? current,
+    candidates: $('candidates').checked, guides: $('visuals').checked
+  } : null;
+  const result = window.godokuSession.save(snapshot);
+  if (result !== 'failed') hasSavedPuzzle = hasPuzzle;
+  const text = result === 'failed' ? (hasPuzzle ? 'This browser could not save your puzzle. Keep this page open to retain your progress.' : 'This browser could not remove the saved puzzle.') :
+    result === 'without-photo' ? 'Puzzle saved. The reference photo could not fit in browser storage.' : '';
+  $('save-status').textContent = text;
+  $('save-status').hidden = !text;
+}
+// Flush pending edits when a phone backgrounds the page or the tab closes.
+window.addEventListener('pagehide', saveSession);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveSession(); });
 
 for (let index = 0; index < 81; index++) {
   const cell = document.createElement('div');
@@ -166,6 +201,7 @@ function render() {
   }
   renderVisuals(state, step);
   updateControls();
+  scheduleSessionSave();
 }
 async function api(path, puzzle) {
   if (window.godokuEngine) {
@@ -227,6 +263,7 @@ $('clear').addEventListener('click', () => {
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
   transcribing = true; referencePhoto = ''; $('reference-image').removeAttribute('src');
   message(''); render(); cells[0].input.focus();
+  saveSession(true);
 });
 $('edit').addEventListener('click', () => { states = []; current = 0; showIssues([]); message(''); render(); });
 function navigate(index) { current = Math.max(0, Math.min(states.length - 1, index)); render(); }
@@ -443,3 +480,21 @@ const layoutObserver = new ResizeObserver(entries => {
 layoutObserver.observe(boardStage);
 layoutObserver.observe(document.querySelector('.playback'));
 window.visualViewport?.addEventListener('resize', fitBoard);
+
+// Recompute history from the saved submission rather than storing candidate
+// snapshots. The clue colors and editing mode remain independent of playback.
+async function restorePlayback() {
+  message('Restoring solving steps…');
+  try {
+    const result = await api('/api/solve', puzzleString());
+    states = result.states;
+    current = Math.max(0, Math.min(restoringStep, states.length - 1));
+    if (givenClues === null) givenClues = [...original];
+    message(result.solved ? '' : 'Stopped: no more supported moves.');
+  } catch {
+    message('Puzzle restored. The solving steps could not be loaded; try Solve again.', 'error');
+  } finally {
+    restoringStep = null; busy = false; render();
+  }
+}
+if (restoringStep !== null) restorePlayback();

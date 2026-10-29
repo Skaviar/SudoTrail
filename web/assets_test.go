@@ -13,6 +13,7 @@ func TestEmbeddedAssets(t *testing.T) {
 		{"/styles.css", "text/css", ".board"},
 		{"/app.js", "javascript", "/api/solve"},
 		{"/photo.js", "javascript", "tessedit_char_whitelist"},
+		{"/session.js", "javascript", "godoku.session.v1"},
 	} {
 		w := httptest.NewRecorder()
 		Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, tt.path, nil))

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Godoku</title>
-<link rel="stylesheet" href="/styles.css"><script src="/engine.js" defer></script><script src="/app.js" defer></script><script src="/photo.js" defer></script>
+<link rel="stylesheet" href="/styles.css"><script src="/engine.js" defer></script><script src="/session.js" defer></script><script src="/app.js" defer></script><script src="/photo.js" defer></script>
 </head>
 <body>
 <header><a class="brand" href="/" aria-label="Godoku home"><span class="brand-mark" aria-hidden="true">▦</span> godoku<span class="brand-dot">.</span></a></header>
@@ -28,6 +28,7 @@
 <p id="board-hint" class="entry-hint">Type 1–9 for clues; 0, space or another character skips a blank.</p>
 <div class="board-stage"><div class="board-wrap"><div id="board" class="board" role="group" aria-label="Editable Sudoku board"></div><svg id="deduction-overlay" class="deduction-overlay" aria-hidden="true"></svg></div></div>
 <p id="message" class="message" role="status" aria-live="polite"></p>
+<p id="save-status" class="message error" role="status" aria-live="polite" hidden></p>
 <ul id="issues" class="issues" aria-label="Validation issues" hidden></ul>
 </section>
 <aside class="reasoning-panel" aria-label="Solving explanation">

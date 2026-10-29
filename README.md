@@ -222,6 +222,17 @@ Open `http://127.0.0.1:8080` in a browser. The interface supports:
 - Solving and exploring history using Previous/Next, First/Last, or a slider.
 - Viewing candidate marks, new placements, and crossed-out eliminated candidates.
 - Returning to the original clues for editing, or clearing the board.
+- Automatically saving the latest puzzle in this browser, including edits,
+  clue colors, photo reference, display settings, and the selected solving step.
+  Refreshing or returning to the site restores it; **Clear** deletes the save.
+
+Progress uses `localStorage` on the same browser and site address, with no
+account, cookies, or server storage. It does not sync between devices. Solving
+history is rebuilt from the saved submission when reopening playback. Clearing
+site data removes the save. If the browser blocks saving or cannot fit a photo,
+the interface reports it while keeping editing and solving available.
+Storage behavior can also be checked with `node --test web/session_test.mjs`
+when Node is available; Node is not required to build or run the app.
 
 The HTML, CSS, and JavaScript in `web/` are embedded in the Go executable.
 Restart `go run ./cmd/web` after changing frontend files. No Node build or
