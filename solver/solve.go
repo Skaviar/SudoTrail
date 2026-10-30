@@ -112,6 +112,11 @@ func (s *Sudoku) applyTechnique() (Step, bool) {
 			return step, true
 		}
 	}
+	for size := 3; size <= 7; size++ {
+		if step, ok := ApplyFinnedFish(s, size); ok {
+			return step, true
+		}
+	}
 
 	return Step{}, false
 }

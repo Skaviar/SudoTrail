@@ -2,6 +2,46 @@ package solver
 
 import "fmt"
 
+var fishNames = [...]string{2: "X-Wing", 3: "Swordfish", 4: "Jellyfish", 5: "Squirmbag", 6: "Whale", 7: "Leviathan"}
+
+// These masks select zero-based rows/columns, not Sudoku digits. The fixed
+// combinations are shared across puzzles and are never modified by a solver.
+var fishSelections = func() [8][]uint16 {
+	var selections [8][]uint16
+	for mask := uint16(1); mask < 1<<9; mask++ {
+		if size := candidateCount(mask); size >= 2 && size <= 7 {
+			selections[size] = append(selections[size], mask)
+		}
+	}
+	return selections
+}()
+
+// In row mode, each mask holds a row's candidate columns. Column mode swaps
+// the axes. A unit already containing the digit has no candidate locations.
+func fishPositions(s *Sudoku, number, direction int) [9]uint16 {
+	var positions [9]uint16
+	for base := range 9 {
+		for position := range 9 {
+			cell := fishCell(base, position, direction)
+			if int(s.Board[cell.Row][cell.Col]) == number {
+				positions[base] = 0
+				break
+			}
+			if cellHasCandidate(s, cell, number) {
+				positions[base] |= 1 << position
+			}
+		}
+	}
+	return positions
+}
+
+func fishCell(base, position, direction int) Cell {
+	if direction == 1 {
+		return Cell{position, base}
+	}
+	return Cell{base, position}
+}
+
 // ApplyBasicFish reserves N columns for N rows, or N rows for N columns,
 // considering one digit at a time. Sizes 2, 3, and 4 are X-Wing, Swordfish,
 // and Jellyfish; sizes 5–7 are Squirmbag, Whale, and Leviathan.
@@ -10,22 +50,13 @@ func ApplyBasicFish(s *Sudoku, size int) (Step, bool) {
 	if size < 2 || size > 7 {
 		return Step{}, false
 	}
-	technique := map[int]string{2: "X-Wing", 3: "Swordfish", 4: "Jellyfish", 5: "Squirmbag", 6: "Whale", 7: "Leviathan"}[size]
+	technique := fishNames[size]
 	units := allUnits()
 	for number := 1; number <= 9; number++ {
 		for direction := range 2 {
-			// In row mode, positions are columns. In column mode, they are rows.
-			// These bits represent zero-based POSITIONS, not Sudoku digits.
-			var positions [9]uint16
+			positions := fishPositions(s, number, direction)
 			var eligible uint16
 			for base := range 9 {
-				for _, cell := range candidateCells(s, units[direction*9+base], number) {
-					position := cell.Col
-					if direction == 1 {
-						position = cell.Row
-					}
-					positions[base] |= 1 << position
-				}
 				count := candidateCount(positions[base])
 				if count >= 2 && count <= size {
 					eligible |= 1 << base
@@ -34,8 +65,8 @@ func ApplyBasicFish(s *Sudoku, size int) (Step, bool) {
 			if candidateCount(eligible) < size {
 				continue
 			}
-			for selection := uint16(1); selection < 1<<9; selection++ {
-				if candidateCount(selection) != size || selection&^eligible != 0 {
+			for _, selection := range fishSelections[size] {
+				if selection&^eligible != 0 {
 					continue
 				}
 				var covers uint16

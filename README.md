@@ -420,9 +420,9 @@ Definitions: [basic fish](https://hodoku.sourceforge.net/en/tech_fishb.php),
 
 The next logical group runs after the existing techniques, in this order:
 
-1. **Finned/Sashimi X-Wing** (`solver/finned_fish.go`): an X-Wing with uncovered
-   candidates (fins). A missing corner makes it Sashimi. Only cover candidates
-   outside the base units that see every fin can be removed. Fins are amber.
+1. **Finned/Sashimi X-Wing** (`solver/finned_fish.go`): a fish with uncovered
+   candidates (fins). Only cover candidates outside the base units that see
+   every fin can be removed. Fins are amber, and their shared box is outlined.
 2. **Remote Pairs** (`solver/coloring.go`): connected identical two-candidate
    cells must alternate values. Cells seeing opposite assignments lose the pair
    digits. Both candidates have explicit opposite color markings.
@@ -441,6 +441,22 @@ The next logical group runs after the existing techniques, in this order:
    is placed, followed by a separate peer-elimination step.
 6. **Larger basic fish** (`solver/fish.go`): Squirmbag (size 5), Whale (6), and
    Leviathan (7), in either orientation, using the existing counting rule.
+7. **Larger Finned/Sashimi fish** (`solver/finned_fish.go`): Swordfish (3),
+   Jellyfish (4), Squirmbag (5), Whale (6), and Leviathan (7), tried in that
+   order after the existing methods. Each uses the same fin rule as X-Wing.
+
+`ApplyFinnedFish(s, size)` supports sizes 2–7 in rows or columns;
+`ApplyFinnedXWing(s)` remains the size-2 entry point. A fin-free core is called
+**Sashimi** when it reduces to a single or a smaller fish, including a cover
+with only one possible location. Sparse intersections alone do not make it
+Sashimi. All fins must share a box, and eliminations stay inside that box,
+outside the selected base units and inside the selected cover units.
+
+To limit benchmark overhead, candidate positions and unit combinations are
+shared by the fish detectors. For each possible fin box, every candidate
+outside that box must be covered, leaving at most eight cover combinations.
+Tests independently enumerate legal placements of the fish digit, including
+sparse patterns, multiple fins, both orientations, and randomized candidates.
 
 Uniqueness deductions require proof that the **original submitted clues** have
 exactly one solution. `HasUniqueSolution()` (`solver/uniqueness_check.go`) uses
