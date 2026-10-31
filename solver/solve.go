@@ -117,8 +117,55 @@ func (s *Sudoku) applyTechnique() (Step, bool) {
 			return step, true
 		}
 	}
+	return s.applyAdvancedTechniques()
+}
 
-	return Step{}, false
+// The advanced stage is reached only when the simpler named patterns stall.
+// Graphs and ALSs belong to this candidate state and are reused within it.
+func (s *Sudoku) applyAdvancedTechniques() (Step, bool) {
+	if s.IsSolved() {
+		return Step{}, false
+	}
+	if step, ok := ApplyAdvancedRectangles(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyMissingCandidateRectangles(s); ok {
+		return step, true
+	}
+	if step, ok := ApplyAvoidableRectangle(s); ok {
+		return step, true
+	}
+	g := buildCandidateGraph(s)
+	if step, ok := applyMultiColoring(s, g); ok {
+		return step, true
+	}
+	if step, ok := applyMedusa(s, g); ok {
+		return step, true
+	}
+	for _, mode := range []string{"X-Chain", "XY-Chain", "Alternating Inference Chain"} {
+		if step, ok := applyChains(s, g, mode); ok {
+			return step, true
+		}
+	}
+	als := buildALS(s)
+	if step, ok := applyALS(s, als); ok {
+		return step, true
+	}
+	if step, ok := applyDeathBlossom(s, als); ok {
+		return step, true
+	}
+	for size := 2; size <= 7; size++ {
+		if step, ok := ApplySiameseFish(s, size); ok {
+			return step, true
+		}
+		if step, ok := ApplyComplexFish(s, size); ok {
+			return step, true
+		}
+	}
+	if step, ok := applyForcing(s, g, false); ok {
+		return step, true
+	}
+	return applyForcing(s, g, true)
 }
 
 // Solve applies available techniques and returns the complete history.

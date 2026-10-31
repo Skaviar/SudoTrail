@@ -5,6 +5,9 @@ import "fmt"
 // StepVisual describes the evidence behind a deduction for a visual renderer.
 // Unit coordinates and cell coordinates are zero-based.
 type StepVisual struct {
+	Inferences     []InferenceLink        `json:"inferences,omitempty"`
+	Proofs         []ProofBranch          `json:"proofs,omitempty"`
+	Exact          bool                   `json:"exact,omitempty"` // Suppress guessed renderer links.
 	Highlights     []CandidateHighlight   `json:"highlights,omitempty"`
 	CandidateLinks []CandidateLink        `json:"candidateLinks,omitempty"`
 	Links          []VisualLink           `json:"links,omitempty"`

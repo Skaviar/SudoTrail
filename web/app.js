@@ -19,6 +19,8 @@ let conflicts = new Set();
 let puzzleLabel = savedSession?.puzzleLabel || '';
 let saveTimer;
 let hasSavedPuzzle = savedSession !== null;
+let proofStep = null;
+let selectedProof = 0;
 $('candidates').checked = savedSession?.candidates ?? true;
 $('visuals').checked = savedSession?.guides ?? true;
 if (referencePhoto) $('reference-image').src = referencePhoto;
@@ -159,6 +161,7 @@ function render() {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }
   const step = state?.step;
+  if (proofStep !== step) { proofStep = step; selectedProof = 0; }
   const removed = new Set((step?.eliminations || []).map(e => `${e.row},${e.col},${e.number}`));
   for (let index = 0; index < 81; index++) {
     const row = Math.floor(index / 9), col = index % 9;
@@ -191,10 +194,22 @@ function render() {
   $('timeline').max = Math.max(0, states.length - 1);
   $('timeline').value = current;
   $('details').replaceChildren();
+  const proofs = step?.visual?.proofs || [];
+  $('proof-choice').hidden = proofs.length < 2;
+  $('proof-branch').replaceChildren();
+  for (let i = 0; i < proofs.length; i++) {
+    const option = document.createElement('option');
+    option.value = i; option.textContent = `Branch ${i + 1} of ${proofs.length}`;
+    option.selected = i === selectedProof; $('proof-branch').append(option);
+  }
   if (state) {
     $('technique').textContent = step?.technique || 'Initial puzzle';
     $('step-title').textContent = step?.explanation || 'Original puzzle';
-    const details = step?.details || ['Use Next to see the first move.'];
+    const branch = proofs[selectedProof];
+    const details = branch ? branch.nodes.map((node, i) =>
+      `${i + 1}. R${node.row + 1}C${node.col + 1} ${node.true ? '=' : '≠'} ${node.number}: ${node.reason}${node.parents?.length ? ` (from ${node.parents.map(p => p + 1).join(', ')})` : ''}.`
+    ) : step?.details || ['Use Next to see the first move.'];
+    if (branch?.contradiction) details.push(branch.contradiction);
     for (const text of details) {
       const item = document.createElement('li'); item.textContent = text; $('details').append(item);
     }
@@ -274,6 +289,7 @@ $('last').addEventListener('click', () => navigate(states.length - 1));
 $('timeline').addEventListener('input', event => navigate(Number(event.target.value)));
 $('candidates').addEventListener('change', render);
 $('visuals').addEventListener('change', render);
+$('proof-branch').addEventListener('change', event => { selectedProof = Number(event.target.value); render(); });
 new ResizeObserver(() => renderVisuals(states[current], states[current]?.step)).observe(board);
 render();
 
@@ -281,10 +297,15 @@ render();
 // remove candidates; the UI never infers peer cleanup from a placement diff.
 function visualData(state, step) {
   const visual = step?.visual || {};
+  const proof = visual.proofs?.[selectedProof];
+  const inferences = proof ? proof.nodes.flatMap(node => (node.parents || []).map(p => ({
+    from: proof.nodes[p], to: node, kind: 'implication', reason: node.reason
+  }))) : visual.inferences || [];
+  const sources = proof ? [...new Map(proof.nodes.map(c => [`${c.row},${c.col}`, c])).values()] : visual.sources || [];
   return {
-    sources: visual.sources || [], digits: visual.digits || [], units: visual.units || [],
+    sources, digits: visual.digits || [], units: visual.units || [],
     links: visual.links || [], candidateLinks: visual.candidateLinks || [],
-    highlights: visual.highlights || [],
+    highlights: proof ? proof.nodes.map(c => ({ ...c, role: c.true ? 'color-a' : 'color-b' })) : visual.highlights || [], inferences, exact: !!visual.exact,
     restrictions: visual.restrictions || [], targets: step?.eliminations || []
   };
 }
@@ -299,7 +320,7 @@ function renderVisuals(state, step) {
   }
   $('visual-summary').hidden = true;
   if (!state || !step || !$('visuals').checked) return;
-  const { sources, digits, units, links, candidateLinks, highlights, restrictions, targets } = visualData(state, step);
+  const { sources, digits, units, links, candidateLinks, highlights, inferences, exact, restrictions, targets } = visualData(state, step);
   const bounds = board.getBoundingClientRect();
   overlay.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
   const svg = (tag, attributes) => {
@@ -333,7 +354,10 @@ function renderVisuals(state, step) {
   for (const source of sources) {
     const entry = cellAt(source); entry.cell.classList.add('source-cell');
     const sameCell = p => p.row === source.row && p.col === source.col;
-    const linkedDigits = [...new Set(candidateLinks.filter(link => sameCell(link.from) || sameCell(link.to)).map(link => link.number))];
+    const linkedDigits = [...new Set([
+      ...candidateLinks.filter(link => sameCell(link.from) || sameCell(link.to)).map(link => link.number),
+      ...inferences.flatMap(link => [link.from, link.to].filter(sameCell).map(c => c.number))
+    ])];
     for (const digit of linkedDigits.length ? linkedDigits : digits) {
       const mark = entry.marks.querySelector(`[data-digit="${digit}"]`);
       if (mark?.textContent && !mark.classList.contains('removed')) mark.classList.add('evidence');
@@ -347,7 +371,7 @@ function renderVisuals(state, step) {
     if (mark?.textContent && !mark.classList.contains('removed')) mark.classList.add(highlight.role);
   }
   // Locked candidates get one clear axis through their source cells.
-  if (!step.number && !links.length && !candidateLinks.length && sources.length > 1 && digits.length === 1) {
+  if (!exact && !step.number && !links.length && !candidateLinks.length && sources.length > 1 && digits.length === 1) {
     const points = sources.map(source => point(source, digits[0]));
     if (sources.every(p => p.row === sources[0].row) || sources.every(p => p.col === sources[0].col)) {
       const a = points[0], b = points.at(-1);
@@ -371,8 +395,8 @@ function renderVisuals(state, step) {
     svg('circle', { cx: end.x, cy: end.y, r: radius, class: restricted ? 'guide-restriction' : 'guide-ring' });
     if (!$('candidates').checked) svg('path', { d: `M${end.x - 4},${end.y - 4}l8,8m0,-8l-8,8`, class: 'guide-cross' });
   };
-  const connect = (source, target, number, actualBlocker) => {
-    const start = point(source, number), end = point(target, number);
+  const connect = (source, target, number, actualBlocker, toNumber = number) => {
+    const start = point(source, number), end = point(target, toNumber);
     if (state.board[target.row][target.col]) {
       // Terminate at the edge of the destination cell, leaving its digit clear.
       const distance = Math.hypot(end.x - start.x, end.y - start.y);
@@ -404,9 +428,16 @@ function renderVisuals(state, step) {
         ? `${from} and ${to} cannot both contain ${link.number}.`
         : `The highlighted pattern rules out ${link.number} in ${to}; ${from} is a supporting candidate.`;
   }
+  for (const link of inferences) {
+    const line = connect(link.from, link.to, link.from.number, false, link.to.number);
+    line.dataset.kind = link.kind;
+    line.dataset.toNumber = link.to.number;
+    line.classList.add(`guide-${link.kind}`);
+    line.querySelector('title').textContent = link.reason;
+  }
   for (const target of targets) {
     markTarget(target, false);
-    if (links.length || candidateLinks.length) continue;
+    if (exact || links.length || candidateLinks.length || inferences.length) continue;
     const sameCell = sources.some(source => source.row === target.row && source.col === target.col);
     if (!sameCell && sources.length) {
       // Locked-candidate evidence contains unplaced candidates; these are

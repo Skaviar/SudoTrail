@@ -2,9 +2,12 @@ package solver
 
 import "fmt"
 
-// ApplyUniqueRectangle supports types 1 and 2 with both rectangle digits
-// present in all four cells. Missing-candidate variants are separate methods.
+// ApplyUniqueRectangle supports types 1..6. Types 1/2 have small direct scans;
+// the other types share the rectangle scanner. Missing variants are separate.
 func ApplyUniqueRectangle(s *Sudoku, kind int) (Step, bool) {
+	if kind >= 3 && kind <= 6 {
+		return applyRectangles(s, false, fmt.Sprintf("Unique Rectangle Type %d", kind))
+	}
 	if kind != 1 && kind != 2 {
 		return Step{}, false
 	}

@@ -24,6 +24,13 @@ func cellsSeeEachOther(a, b Cell) bool {
 // allUnits returns all 27 Sudoku units:
 // 9 rows, 9 columns, and 9 boxes.
 func allUnits() []unit {
+	return sudokuUnits
+}
+
+// Callers only read this topology; concurrent benchmark workers share it.
+var sudokuUnits = buildUnits()
+
+func buildUnits() []unit {
 	units := make([]unit, 0, 27)
 
 	for row := 0; row < 9; row++ {

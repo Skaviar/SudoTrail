@@ -121,14 +121,14 @@ func TestBenchmarkEmptyDatabase(t *testing.T) {
 	}
 }
 
-func TestBenchmarkDoesNotCompleteStalledUniquePuzzles(t *testing.T) {
-	// This puzzle has one solution but needs techniques beyond those implemented.
+func TestBenchmarkIncludesAdvancedLogicalTechniques(t *testing.T) {
+	// The advanced logical stage now solves this previously stalled puzzle.
 	const puzzle = "..61.4.9.35...9......25.........5..8......2...324...718...9.3...95...7...4.7.1..."
 	input := benchmarkHeader + benchmarkRecord(1, benchmarkSolvedGrid) + benchmarkRecord(2, puzzle)
 	for _, workers := range []int{1, 8} {
 		stats, err := benchmarkCSV(context.Background(), strings.NewReader(input), workers, 0, nil)
-		if err != nil || stats != (benchmarkStats{Processed: 2, Solved: 1, Unsolved: 1}) {
-			t.Fatalf("benchmark completed a puzzle that needs unsupported techniques: %+v, %v", stats, err)
+		if err != nil || stats != (benchmarkStats{Processed: 2, Solved: 2}) {
+			t.Fatalf("benchmark and interactive logical solving disagree: %+v, %v", stats, err)
 		}
 	}
 }

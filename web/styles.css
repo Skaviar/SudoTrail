@@ -89,6 +89,10 @@ h2 { margin: 0; }
 .guide-axis { stroke: #508f81; stroke-width: 2.5; opacity: .65; stroke-linecap: round; }
 .guide-blocker { stroke: #ab694d; stroke-dasharray: none; opacity: .8; stroke-width: 1.6; }
 .guide-strong { stroke: #287d70; stroke-dasharray: none; stroke-width: 2.4; opacity: .85; }
+.guide-implication { stroke: #7551a0; stroke-dasharray: 3 3; opacity: .65; }
+#proof-choice { font-size: .8rem; display: flex; align-items: center; gap: .5rem; margin-top: .5rem; }
+#proof-choice[hidden] { display: none; }
+#proof-branch { max-width: 100%; font: inherit; color: inherit; border: 1px solid #cbd5df; border-radius: 4px; background: transparent; padding: .2rem; }
 .guide-weak { stroke: #508f81; stroke-dasharray: 4 4; opacity: .75; }
 .guide-restriction { fill: none; stroke: #b28050; stroke-width: 1.5; }
 .candidate-grid .blocked { color: #9a6541; text-decoration: line-through; background: #f5e7d7; border-radius: 3px; }

@@ -50,7 +50,7 @@ func TestUniquenessCheckIgnoresLaterCandidateEliminations(t *testing.T) {
 	}
 }
 
-func TestUniquenessCheckDoesNotCompleteStalledPuzzle(t *testing.T) {
+func TestUniquenessCheckNeverSuppliesPlacements(t *testing.T) {
 	const puzzle = "..61.4.9.35...9......25.........5..8......2...324...718...9.3...95...7...4.7.1..."
 	s, err := NewSudoku(Puzzle{Puzzle: puzzle})
 	if err != nil {
@@ -61,11 +61,10 @@ func TestUniquenessCheckDoesNotCompleteStalledPuzzle(t *testing.T) {
 		t.Fatal("uniqueness check must only confirm the puzzle is unique")
 	}
 	s.Solve()
-	if s.IsSolved() {
-		t.Fatal("logical solving completed a puzzle that needs unsupported techniques")
-	}
+	// Additional logical techniques may now solve this former stalled case.
+	// The uniqueness verdict itself must still leave the current state intact.
 	stuck := CaptureBoardState(s)
-	if !s.HasUniqueSolution() {
+	if !s.HasUniqueSolution() || CaptureBoardState(s) != stuck {
 		t.Fatal("solving changed the original uniqueness verdict")
 	}
 	if _, ok := s.SolveStep(); ok {

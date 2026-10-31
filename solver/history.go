@@ -63,6 +63,15 @@ func NewSolverHistory(s *Sudoku) *SolverHistory {
 func (h *SolverHistory) RecordStep(s *Sudoku, step Step) {
 	if step.Visual != nil {
 		visual := *step.Visual
+		visual.Inferences = append([]InferenceLink(nil), visual.Inferences...)
+		visual.Proofs = append([]ProofBranch(nil), visual.Proofs...)
+		for i := range visual.Proofs {
+			visual.Proofs[i].Nodes = append([]ProofNode(nil), visual.Proofs[i].Nodes...)
+			visual.Proofs[i].Conflict = append([]int(nil), visual.Proofs[i].Conflict...)
+			for j := range visual.Proofs[i].Nodes {
+				visual.Proofs[i].Nodes[j].Parents = append([]int(nil), visual.Proofs[i].Nodes[j].Parents...)
+			}
+		}
 		visual.Highlights = append([]CandidateHighlight(nil), visual.Highlights...)
 		visual.CandidateLinks = append([]CandidateLink(nil), visual.CandidateLinks...)
 		visual.Links = append([]VisualLink(nil), visual.Links...)

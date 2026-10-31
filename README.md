@@ -87,6 +87,53 @@ the original puzzle has exactly one solution, as required by uniqueness
 techniques. It never supplies placements or candidate eliminations. When the
 available techniques cannot advance a puzzle, it remains unsolved.
 
+## Logical techniques
+
+The terminal, HTTP API, and WASM build use the same techniques. Simpler moves
+run first; the advanced stage runs only when those moves stall.
+
+| Family | Implemented |
+| --- | --- |
+| Singles and subsets | Full House, Naked/Hidden Singles, Naked/Hidden Pairs, Triples and Quads; Pointing and Claiming |
+| Basic fish | X-Wing through Leviathan (sizes 2–7), including finned and sashimi variants |
+| Complex fish | Franken and Mutant fish (sizes 2–7), fins, endo fins, cannibalistic eliminations, and Siamese combinations |
+| Single-digit patterns | Skyscraper, 2-String Kite, Turbot Fish, Empty Rectangle |
+| Wings | XY-Wing, XYZ-Wing, W-Wing |
+| Uniqueness | Unique Rectangle types 1–6, Hidden Rectangle, Avoidable Rectangle types 1/2, missing-candidate rectangles, BUG+1 |
+| Coloring | Remote Pairs, Simple Coloring, Multi-Coloring, 3D Medusa (cell and unit conflicts/traps) |
+| Chains and loops | X-Chains, XY-Chains, Alternating Inference Chains, including endpoint and Nice Loop eliminations |
+| Almost locked sets | Singly/doubly linked ALS-XZ, ALS-XY-Wing, ALS Chains, Death Blossom |
+| Forcing | Contradictions and common conclusions from Forcing Chains and Forcing Nets |
+
+**Forcing is an explained logical proof.** Each branch starts with one premise,
+then follows links or propagates singles. Nets can combine several earlier
+deductions. Branches never create further assumptions, recursively explore
+completions, or use a completed solution. The step contains the dependencies
+needed to check the conclusion. In the website, “Why this move?” lets you view
+one proof branch at a time. Placements and their peer eliminations remain
+separate steps.
+
+Complex fish detection is deliberately bounded to keep browser solves and
+large benchmarks responsive: each digit/size has a budget of 3,000 cover-tree
+nodes, with smaller candidate houses considered first. This can miss a valid
+fish; it cannot make a returned fish deduction unsound. Multi-Coloring combines
+two components at a time; AICs handle longer connections. The implemented
+catalog is not a claim that every possible Sudoku or every variant of a named
+pattern will be found.
+
+All uniqueness rules first verify the original clues. Missing rectangle
+candidates must be allowed by those clues, and Avoidable Rectangles cannot
+include an original given. The uniqueness checker returns a verdict only.
+
+The rules follow the explanations in [HoDoKu's technique guide](https://hodoku.sourceforge.net/en/techniques.php)
+and Andrew Stuart's [3D Medusa guide](https://www.sudokuwiki.org/3d_medusa).
+
+For the advanced implementation, read `solver/inference.go` (candidate links),
+`solver/chains.go` (alternating paths), then `solver/forcing.go` (proof branches).
+The other families live in `rectangles.go`, `complex_fish.go`, `medusa.go`, and
+`als.go`. `topology.go` stores sets of cells; these are distinct from the digit
+bitmasks in `candidates.go`.
+
 ## Static Go WebAssembly build (Cloudflare Pages)
 
 The website can run entirely in the browser: the Go solver compiles to
