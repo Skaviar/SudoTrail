@@ -18,6 +18,7 @@ Run `make` to list the available commands. Go remains the only build dependency;
 | `make web` | Run the local Go HTTP API and website |
 | `make run` | Run the terminal app and its benchmark menu |
 | `make benchmark WORKERS=8` | Benchmark the entire CSV with 8 workers |
+| `make rate WORKERS=8` | Export puzzle difficulties to a new `sudoku-rated.csv` |
 | `make check` | Run tests and `go vet` |
 | `make race` | Run tests with the race detector |
 | `make fmt` | Format Go source |
@@ -58,10 +59,12 @@ Flags:
 
 | Flag | Meaning |
 | --- | --- |
-| `-workers N` | Number of concurrent solver goroutines; defaults to `runtime.GOMAXPROCS(0)` |
+| `-workers N` | Number of concurrent benchmark/rating goroutines; defaults to `runtime.GOMAXPROCS(0)` |
 | `-benchmark` | Run the benchmark and exit |
+| `-rate` | Export difficulty ratings and exit |
 | `-database PATH` | CSV path; defaults to `sudoku-3m.csv` |
 | `-limit N` | Process the first N data records; `0` means the whole file |
+| `-output PATH` | New rating CSV path; defaults to `sudoku-rated.csv` and must not already exist |
 
 `go run . -workers 8` still opens the terminal menu; option **3** uses those
 workers and the same streaming benchmark. `make run WORKERS=8` also works.
@@ -86,6 +89,103 @@ All solves use logical techniques. Backtracking is used only to check whether
 the original puzzle has exactly one solution, as required by uniqueness
 techniques. It never supplies placements or candidate eliminations. When the
 available techniques cannot advance a puzzle, it remains unsolved.
+
+## Difficulty export
+
+Rate the full database and create a new file:
+
+```sh
+make rate WORKERS=8
+# Equivalent:
+go run . -rate -workers 8 -output sudoku-rated.csv
+```
+
+For a small trial, choose a different output filename and a limit:
+
+```sh
+make rate WORKERS=8 LIMIT=10000 OUTPUT=sudoku-rated-test.csv
+```
+
+The terminal menu also offers **4. Rate database puzzles and export
+difficulties**, using the same worker, limit, database, and output settings.
+The source CSV is read only. Existing output files are never overwritten;
+choose an unused output path for another run.
+
+The current policy is **`godoku-v1`**:
+
+| Category | Techniques allowed before moving to the next tier |
+| --- | --- |
+| Easy | Full House, Naked Single, Hidden Single |
+| Medium | Pointing, Claiming, Naked/Hidden Pairs and Triples |
+| Hard | Quads, X-Wing/Swordfish/Jellyfish, Skyscraper/2-String Kite/Turbot Fish/Empty Rectangle, XY/XYZ/W-Wings, Remote Pairs, Simple Coloring, UR types 1/2, BUG+1 |
+| Expert | Finned/Sashimi and larger basic fish, complex/Siamese fish, advanced or missing-candidate rectangles, Multi-Coloring/Medusa, chains/ALS, forcing chains/nets |
+
+After **every deduction**, the rating solver restarts at Easy. It exhausts
+all lower tiers before trying an Expert move. The ordinary teaching solver
+keeps its existing technique order, so its displayed path can differ from the
+rating path. These are Godoku-specific ratings of the path found, not a proof
+that no easier solution path exists.
+
+The label is the hardest tier used. A separate **score** adds the technique
+weight for every deduction; it distinguishes the amount of work within a
+category without promoting a long singles-only puzzle to Expert. For example,
+Full House/Naked Single cost 1, Hidden Single 2, Naked Pair 10, X-Wing 40,
+XY-Wing 60, 3D Medusa 180, Forcing Chain 500, and Forcing Net 800. The complete
+weights and fish-name rules are in [solver/rating.go](solver/rating.go).
+Changing the policy requires updating its version.
+
+Each placement or elimination pattern counts as one logical step. Automatic
+peer-candidate cleanup counts as zero steps and zero points. Source difficulty
+and supplied solution strings do not influence the rating. Backtracking remains
+restricted to uniqueness checks.
+
+The export has these columns:
+
+```csv
+id,puzzle,solution,clues,difficulty,original_difficulty,score,hardest_technique,logical_steps,technique_counts,rating_status,rating_version,rating_error
+```
+
+`technique_counts` is a JSON object inside a properly quoted CSV field.
+`rating_status` is `solved`, `unsolved`, or `invalid`. Only solved puzzles get
+an Easy/Medium/Hard/Expert label. Unsolved rows retain any partial score and
+technique counts; invalid rows include a validation error. A completed grid
+needs zero deductions and is Easy with score 0.
+
+Output rows retain input order, regardless of worker count. Both jobs and
+out-of-order results are bounded in memory, and no solving histories are
+retained. Progress includes each difficulty count and ETA; the final summary
+prints counts and percentages of processed records. **Ctrl+C** flushes an
+ordered partial CSV containing the written rows. CSV/I/O failures are reported
+instead of silently dropping records.
+
+The first five columns remain compatible with the terminal and HTTP catalogs:
+
+```sh
+go run . -database sudoku-rated.csv
+go run ./cmd/web -database sudoku-rated.csv
+```
+
+The browser's embedded 1,000-puzzle bank is a separate checked-in catalog;
+exporting this file does not replace it or add a difficulty selector to the UI.
+
+Split a rated catalog into separate difficulty files with Python 3.9 or newer
+(no packages to install):
+
+```sh
+python3 scripts/split_difficulties.py sudoku-rated.csv
+# Or choose another destination:
+python3 scripts/split_difficulties.py sudoku-rated.csv --output-dir my-puzzles
+```
+
+The default directory is `puzzles-by-difficulty/`, containing `easy.csv`,
+`medium.csv`, `hard.csv`, and `expert.csv`. Every file retains the original
+header, all columns, and the relative order of its puzzles. Unsolved, invalid,
+or unlabeled rows go into `unrated.csv` only when such rows exist. The script
+streams the input, reports counts, and refuses to overwrite existing files.
+Unknown difficulty labels or malformed records stop with an error; partial
+files may remain, so use a new output directory for another run.
+
+Test the splitter with `python3 -m unittest discover -s scripts -p 'test_*.py'`.
 
 ## Logical techniques
 

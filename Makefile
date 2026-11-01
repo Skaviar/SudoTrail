@@ -6,8 +6,9 @@ DATABASE ?= sudoku-3m.csv
 DIST ?= dist
 WORKERS ?=
 LIMIT ?= 0
+OUTPUT ?= sudoku-rated.csv
 
-.PHONY: help run benchmark web build preview dev test race vet check fmt
+.PHONY: help run benchmark rate web build preview dev test race vet check fmt
 
 help:
 	@printf '%s\n' \
@@ -18,19 +19,23 @@ help:
 	  '  make web      Run the Go HTTP API and website' \
 	  '  make run      Run the terminal app (including benchmark menu)' \
 	  '  make benchmark Run the CSV benchmark (WORKERS=N LIMIT=N)' \
+	  '  make rate     Export difficulty ratings (WORKERS=N LIMIT=N OUTPUT=path.csv)' \
 	  '  make test     Run Go tests' \
 	  '  make race     Run Go tests with the race detector' \
 	  '  make vet      Run go vet' \
 	  '  make check    Run tests and go vet' \
 	  '  make fmt      Format Go source files' \
 	  '' \
-	  'Options: ADDR=127.0.0.1:9090 DIST=dist DATABASE=sudoku-3m.csv WORKERS=8 LIMIT=10000'
+	  'Options: ADDR=127.0.0.1:9090 DIST=dist DATABASE=sudoku-3m.csv WORKERS=8 LIMIT=10000 OUTPUT=sudoku-rated.csv'
 
 run:
-	$(GO) run . -database "$(DATABASE)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
+	$(GO) run . -database "$(DATABASE)" -output "$(OUTPUT)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
 
 benchmark:
 	$(GO) run . -benchmark -database "$(DATABASE)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
+
+rate:
+	$(GO) run . -rate -database "$(DATABASE)" -output "$(OUTPUT)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
 
 web:
 	$(GO) run ./cmd/web -addr "$(ADDR)" -database "$(DATABASE)"
@@ -56,4 +61,4 @@ vet:
 check: test vet
 
 fmt:
-	gofmt -w main.go cli.go benchmark.go benchmark_test.go cmd internal solver web
+	gofmt -w main.go cli.go benchmark.go benchmark_test.go rating.go rating_test.go cmd internal solver web

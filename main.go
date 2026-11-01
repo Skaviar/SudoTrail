@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -15,10 +16,12 @@ import (
 )
 
 func main() {
-	workers := flag.Int("workers", runtime.GOMAXPROCS(0), "number of benchmark workers")
+	workers := flag.Int("workers", runtime.GOMAXPROCS(0), "number of benchmark or difficulty-rating workers")
 	benchmark := flag.Bool("benchmark", false, "benchmark the database and exit without the menu")
+	rate := flag.Bool("rate", false, "rate the database and export difficulties without the menu")
+	destination := flag.String("output", "sudoku-rated.csv", "new CSV path for difficulty export (must not exist)")
 	database := flag.String("database", "sudoku-3m.csv", "puzzle CSV path")
-	limit := flag.Int("limit", 0, "benchmark only the first N puzzle records (0 = all)")
+	limit := flag.Int("limit", 0, "benchmark or rate the first N puzzle records (0 = all)")
 	flag.Parse()
 	if err := validateBenchmarkOptions(*workers, *limit); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -27,6 +30,17 @@ func main() {
 	if flag.NArg() != 0 {
 		fmt.Fprintln(os.Stderr, "unexpected arguments; use -help for available flags")
 		os.Exit(2)
+	}
+	if *rate && *benchmark {
+		fmt.Fprintln(os.Stderr, "choose either -rate or -benchmark")
+		os.Exit(2)
+	}
+	if *rate {
+		if err := runRatingExport(*database, *destination, *workers, *limit, os.Stdout); err != nil {
+			slog.Error("difficulty export failed", slog.Any("error", err))
+			os.Exit(1)
+		}
+		return
 	}
 	if *benchmark {
 		if err := runBenchmark(*database, *workers, *limit, os.Stdout); err != nil {
@@ -47,6 +61,7 @@ func main() {
 		fmt.Println("1. Enter a Sudoku")
 		fmt.Println("2. Solve a random database puzzle")
 		fmt.Println("3. Solve as many database puzzles as possible")
+		fmt.Println("4. Rate database puzzles and export difficulties")
 		fmt.Println("0. Exit")
 		fmt.Print("\nChoose an option: ")
 
@@ -92,12 +107,16 @@ func main() {
 			if err := runBenchmark(*database, *workers, *limit, os.Stdout); err != nil {
 				fmt.Println("Benchmark failed:", err)
 			}
+		case "4":
+			if err := runRatingExport(*database, *destination, *workers, *limit, os.Stdout); err != nil {
+				fmt.Println("Difficulty export failed:", err)
+			}
 
 		case "0":
 			return
 
 		default:
-			fmt.Println("Invalid option. Choose 0, 1, 2, or 3.")
+			fmt.Println("Invalid option. Choose 0, 1, 2, 3, or 4.")
 		}
 	}
 }
@@ -109,11 +128,13 @@ func loadPuzzles(path string) ([]solver.Puzzle, error) {
 	}
 	defer file.Close()
 	var puzzles []solver.Puzzle
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		appendPuzzle(&puzzles, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
+	_, err = scanBenchmarkCSV(context.Background(), file, 0, func(puzzle solver.Puzzle) error {
+		if puzzle.Puzzle != "" {
+			puzzles = append(puzzles, puzzle)
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	if len(puzzles) == 0 {
@@ -201,21 +222,4 @@ func formatDuration(d time.Duration) string {
 	secs := seconds % 60
 
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, secs)
-}
-
-func appendPuzzle(puzzles *[]solver.Puzzle, dataLine string) {
-	dataArray := strings.Split(dataLine, ",")
-
-	if len(dataArray) != 5 || dataArray[0] == "id" {
-		return
-	}
-
-	puzzleItem := solver.Puzzle{
-		Id:         dataArray[0],
-		Puzzle:     dataArray[1],
-		Solution:   dataArray[2],
-		Clues:      dataArray[3],
-		Difficulty: dataArray[4],
-	}
-	*puzzles = append(*puzzles, puzzleItem)
 }

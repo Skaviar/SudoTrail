@@ -42,7 +42,8 @@ func validateBenchmarkOptions(workers, limit int) error {
 
 // scanBenchmarkCSV retains only one CSV record at a time. Malformed record
 // shapes become invalid puzzles, so they are counted rather than disappearing
-// from the denominator. CSV syntax and I/O errors stop the run.
+// from the denominator. Extra rating metadata after the five puzzle columns
+// is allowed. CSV syntax and I/O errors stop the run.
 func scanBenchmarkCSV(ctx context.Context, input io.Reader, limit int, visit func(solver.Puzzle) error) (int64, error) {
 	reader := csv.NewReader(input)
 	reader.FieldsPerRecord = -1
@@ -63,7 +64,7 @@ func scanBenchmarkCSV(ctx context.Context, input io.Reader, limit int, visit fun
 			continue
 		}
 		var puzzle solver.Puzzle
-		if len(row) == 5 {
+		if len(row) >= 5 {
 			puzzle = solver.Puzzle{Id: row[0], Puzzle: row[1], Solution: row[2], Clues: row[3], Difficulty: row[4]}
 		}
 		if visit != nil {
