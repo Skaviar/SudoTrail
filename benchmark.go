@@ -227,3 +227,28 @@ func printBenchmarkSummary(output io.Writer, stats benchmarkStats, total int64, 
 	fmt.Fprintf(output, "Elapsed       : %s\nThroughput    : %.2f puzzles/sec\n",
 		formatDuration(elapsed), float64(stats.Processed)/max(elapsed.Seconds(), 0.001))
 }
+
+// Benchmark and rating exports share these progress display helpers.
+func percentage(numerator, denominator int64) float64 {
+	if denominator == 0 {
+		return 0
+	}
+	return float64(numerator) * 100 / float64(denominator)
+}
+
+func progressBar(percent float64, width int) string {
+	filled := int(percent * float64(width) / 100)
+	if filled > width {
+		filled = width
+	}
+	return "[" + strings.Repeat("█", filled) +
+		strings.Repeat("░", width-filled) + "]"
+}
+
+func formatDuration(d time.Duration) string {
+	seconds := int64(d.Seconds())
+	if seconds < 0 {
+		seconds = 0
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", seconds/3600, (seconds%3600)/60, seconds%60)
+}

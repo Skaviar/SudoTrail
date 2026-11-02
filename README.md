@@ -2,8 +2,10 @@
 
 A Go Sudoku solver that explains one logical move at a time.
 
-Run the terminal app with `go run .`. Keep `sudoku-3m.csv` in the project
-root for database puzzles. Use `go test ./...` to run the tests.
+Run the web UI with `make dev`, or benchmark a CSV with
+`make benchmark WORKERS=8`. Keep `sudoku-3m.csv` in the project root for
+benchmarks; the website uses its embedded practice bank. Run `go run .` to see
+command-line help. Use `make check` to run Go tests and `go vet`.
 
 ## Quick commands
 
@@ -14,11 +16,11 @@ Run `make` to list the available commands. Go remains the only build dependency;
 | --- | --- |
 | `make dev` | Rebuild WASM and serve the static website at http://127.0.0.1:8080 |
 | `make build` | Generate `dist/` for Cloudflare deployment |
-| `make preview` | Same as `make dev`; always rebuilds before serving |
 | `make web` | Run the local Go HTTP API and website |
-| `make run` | Run the terminal app and its benchmark menu |
 | `make benchmark WORKERS=8` | Benchmark the entire CSV with 8 workers |
 | `make rate WORKERS=8` | Export puzzle difficulties to a new `sudoku-rated.csv` |
+| `make bank PER_LEVEL=500` | Rebuild the browser practice bank from `sudoku-rated.csv` |
+| `make test` | Run Go tests |
 | `make check` | Run tests and `go vet` |
 | `make race` | Run tests with the race detector |
 | `make fmt` | Format Go source |
@@ -40,7 +42,7 @@ output directory `dist`. The existing `go run ./cmd/buildweb` command also works
 
 ## Terminal benchmark
 
-Run the full database directly, without entering the menu:
+Run the full database:
 
 ```sh
 go run . -benchmark -workers 8
@@ -66,9 +68,8 @@ Flags:
 | `-limit N` | Process the first N data records; `0` means the whole file |
 | `-output PATH` | New rating CSV path; defaults to `sudoku-rated.csv` and must not already exist |
 
-`go run . -workers 8` still opens the terminal menu; option **3** uses those
-workers and the same streaming benchmark. `make run WORKERS=8` also works.
-Workers must be positive; limits cannot be negative.
+Choose either `-benchmark` or `-rate` when running a command. With no arguments,
+`go run .` prints help and exits. Workers must be positive; limits cannot be negative.
 
 The benchmark counts selected records first, then streams them through a
 bounded worker queue. It does not load the 3-million-puzzle dataset into memory.
@@ -106,8 +107,6 @@ For a small trial, choose a different output filename and a limit:
 make rate WORKERS=8 LIMIT=10000 OUTPUT=sudoku-rated-test.csv
 ```
 
-The terminal menu also offers **4. Rate database puzzles and export
-difficulties**, using the same worker, limit, database, and output settings.
 The source CSV is read only. Existing output files are never overwritten;
 choose an unused output path for another run.
 
@@ -123,8 +122,8 @@ The current policy is **`godoku-v1`**:
 After **every deduction**, the rating solver restarts at Easy. It exhausts
 all lower tiers before trying an Expert move. The web practice solver follows
 this same order so its hints agree with the difficulty labels and technique
-filters. The terminal teaching solver keeps its existing order, so its path can
-differ. These are Godoku-specific ratings of the path found, not a proof that
+filters. The solver library's default teaching order can produce a different
+path. These are Godoku-specific ratings of the path found, not a proof that
 no easier solution path exists.
 
 The label is the hardest tier used. A separate **score** adds the technique
@@ -159,10 +158,10 @@ prints counts and percentages of processed records. **Ctrl+C** flushes an
 ordered partial CSV containing the written rows. CSV/I/O failures are reported
 instead of silently dropping records.
 
-The first five columns remain compatible with the terminal and HTTP catalogs:
+The first five columns remain compatible with benchmarks and the HTTP catalog:
 
 ```sh
-go run . -database sudoku-rated.csv
+go run . -benchmark -database sudoku-rated.csv
 go run ./cmd/web -database sudoku-rated.csv
 ```
 
@@ -325,11 +324,12 @@ navigation run in the visitor's browser. OCR still downloads its engine and
 language data from public CDNs. No service worker/offline installation is added;
 the site must initially load over HTTP(S).
 
-The original programs remain available:
+The command entry points are:
 
 | Command | Mode |
 | --- | --- |
-| `go run .` | Terminal app and full-database benchmarks |
+| `go run . -benchmark` | Full-database benchmark |
+| `go run . -rate` | Difficulty export |
 | `go run ./cmd/web` | Embedded UI with the local Go HTTP API/full CSV |
 | `go run ./cmd/buildweb` | Generate a deployable static WASM website |
 | `go run ./cmd/web -static dist` | Preview static WASM output |
@@ -360,9 +360,10 @@ the board or candidates **before** returning its explanation.
 - `solver/history.go`: an initial snapshot followed by the state after each
   step. Both the board and candidates are copied. A UI can display any entry
   by index without solving again.
-- `main.go`, `benchmark.go`, and `cli.go`: database loading, menu, concurrent
-  CSV benchmarking, terminal rendering, and
-  pausing between steps. The solver package has no terminal dependencies.
+- `main.go`: command-line flags for benchmarking and difficulty export.
+- `benchmark.go` and `rating.go`: streaming CSV processing, concurrent workers,
+  progress reporting, and difficulty export. The solver package has no terminal
+  dependencies.
 
 ## Using the solver
 
@@ -426,7 +427,7 @@ The HTML, CSS, and JavaScript in `web/` are embedded in the Go executable.
 Restart `go run ./cmd/web` after changing frontend files. No Node build or
 separate frontend server is required.
 
-Benchmarks remain available only through the terminal app (`go run .`).
+Benchmarks run through `make benchmark` or `go run . -benchmark`.
 The practice library, manual entry, validation, and solving work without a CSV.
 The native web server also retains unfiltered full-database random selection:
 it indexes CSV offsets at startup and reads one record on demand, without
