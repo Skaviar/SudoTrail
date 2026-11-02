@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <title>Sudotrail — Sudoku Solver</title>
+  <desc>Solve Sudoku step by step. Follow every deduction, or practice techniques at your level.</desc>
+  <defs>
+    <radialGradient id="paper" cx="1" cy="0" r="1.1">
+      <stop stop-color="#e8edde"/>
+      <stop offset="1" stop-color="#f5f5f0"/>
+    </radialGradient>
+    <!-- The trail mark matches icon.svg. Keep this editable source with the PNG. -->
+    <symbol id="trail" viewBox="0 0 32 32">
+      <rect x="1" y="1" width="30" height="30" rx="7" fill="#273b34"/>
+      <path d="M11 5v22M21 5v22M5 11h22M5 21h22" stroke="#f5f5f0" stroke-opacity=".18" stroke-width="1"/>
+      <path d="M26 6H9a3 3 0 0 0-3 3v4a3 3 0 0 0 3 3h14a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H6" stroke="#d4e3bf" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="26" cy="6" r="2" fill="#273b34" stroke="#d4e3bf" stroke-width="1.6"/>
+      <rect x="3" y="23" width="6" height="6" rx="1.5" fill="#d4e3bf"/>
+    </symbol>
+  </defs>
+  <rect width="1200" height="630" fill="url(#paper)"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+    <use href="#trail" x="68" y="66" width="40" height="40"/>
+    <text x="122" y="97" fill="#273b34" font-size="34" font-weight="600" letter-spacing="-1">Sudotrail<tspan fill="#315b4c">.</tspan></text>
+    <text x="72" y="258" fill="#273b34" font-size="70" font-weight="500" letter-spacing="-2">Solve Sudoku,</text>
+    <path d="M72 346h409" stroke="#d4e3bf" stroke-width="18"/>
+    <text x="72" y="342" fill="#315b4c" font-family="Georgia, serif" font-style="italic" font-size="76" letter-spacing="-2">step by step.</text>
+    <g fill="#526552" font-size="26">
+      <text x="74" y="416">Follow every deduction.</text>
+      <text x="74" y="456">Practice techniques at your level.</text>
+    </g>
+  </g>
+  <use href="#trail" x="802" y="190" width="300" height="300"/>
+  <path d="M72 554h1056" stroke="#dce1d3" stroke-width="2"/>
+</svg>

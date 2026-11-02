@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-//go:embed index.html styles.css app.js photo.js engine.js session.js solver-worker.js training.js icon.svg
+//go:embed index.html styles.css app.js photo.js engine.js session.js solver-worker.js training.js icon.svg social-preview.png
 var assets embed.FS
 
 func Handler() http.Handler { return http.FileServer(http.FS(assets)) }

@@ -25,7 +25,7 @@ func build(out string) error {
 	if err := os.MkdirAll(out, 0755); err != nil {
 		return err
 	}
-	for _, name := range []string{"index.html", "styles.css", "app.js", "photo.js", "engine.js", "session.js", "solver-worker.js", "training.js", "icon.svg"} {
+	for _, name := range []string{"index.html", "styles.css", "app.js", "photo.js", "engine.js", "session.js", "solver-worker.js", "training.js", "icon.svg", "social-preview.png"} {
 		content, err := os.ReadFile(filepath.Join("web", name))
 		if err != nil {
 			return err
