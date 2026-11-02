@@ -2,28 +2,43 @@
 <html lang="en" data-engine="api">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Godoku</title>
+<title>Godoku — Sudoku Solver</title>
 <link rel="stylesheet" href="/styles.css"><script src="/engine.js" defer></script><script src="/session.js" defer></script><script src="/training.js" defer></script><script src="/app.js" defer></script><script src="/photo.js" defer></script>
 </head>
 <body>
-<header><a class="brand" href="/" aria-label="Godoku home"><span class="brand-mark" aria-hidden="true">▦</span> godoku<span class="brand-dot">.</span></a></header>
+<header><a class="brand" href="/" aria-label="Godoku home"><svg class="brand-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="currentColor"/><path d="M8.5 5v14M15.5 5v14M5 8.5h14M5 15.5h14" stroke="var(--paper)" stroke-width="1.3"/><rect x="10" y="10" width="4" height="4" rx="1" fill="var(--accent)"/></svg>godoku<span class="brand-dot">.</span></a></header>
 <main>
 <section id="puzzle-chooser" class="puzzle-chooser" aria-labelledby="chooser-title">
-<h1 id="chooser-title">Choose a puzzle</h1>
-<p class="chooser-intro">Practice a level or a technique.</p>
+<div class="chooser-hero"><h1 id="chooser-title">Crack the <em>grid.</em></h1><p class="hero-note">Sudoku solutions. Every move explained.</p></div>
+<div class="chooser-options">
+<section class="chooser-card custom-picker" aria-labelledby="custom-title">
+<h2 id="custom-title">Your puzzle</h2>
+<svg class="puzzle-art" viewBox="0 0 180 180" aria-hidden="true" focusable="false">
+<rect x="1" y="1" width="178" height="178" rx="4" fill="#244c3d"/>
+<path d="M20 1v178M40 1v178M80 1v178M100 1v178M140 1v178M160 1v178M1 20h178M1 40h178M1 80h178M1 100h178M1 140h178M1 160h178" stroke="#4a705c" stroke-width=".8"/>
+<path d="M60 1v178M120 1v178M1 60h178M1 120h178" stroke="#8aa58c" stroke-width="1.5"/>
+<rect x="1" y="1" width="178" height="178" rx="4" fill="none" stroke="#8aa58c" stroke-width="1.5"/>
+<rect x="41" y="1" width="18" height="18" rx="2" fill="var(--accent)"/>
+<g fill="#dfe8d7" font-size="13" font-weight="600" text-anchor="middle" dominant-baseline="central"><text x="10" y="10">5</text><text x="30" y="10">3</text><text x="90" y="10">7</text><text x="10" y="30">6</text><text x="70" y="30">1</text><text x="90" y="30">9</text><text x="110" y="30">5</text><text x="30" y="50">9</text><text x="50" y="50">8</text><text x="150" y="50">6</text><text x="10" y="70">8</text><text x="90" y="70">6</text><text x="170" y="70">3</text><text x="10" y="90">4</text><text x="70" y="90">8</text><text x="110" y="90">3</text><text x="170" y="90">1</text><text x="10" y="110">7</text><text x="90" y="110">2</text><text x="170" y="110">6</text><text x="30" y="130">6</text><text x="130" y="130">2</text><text x="150" y="130">8</text><text x="70" y="150">4</text><text x="90" y="150">1</text><text x="110" y="150">9</text><text x="170" y="150">5</text><text x="90" y="170">8</text><text x="150" y="170">7</text><text x="170" y="170">9</text><text x="50" y="10" fill="#173b2d">4</text></g>
+</svg>
+<div class="own-actions"><button id="enter-puzzle" class="button primary"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7.5 3v14M12.5 3v14M3 7.5h14M3 12.5h14"/></svg>Enter numbers</button><button id="import-photo" class="button secondary"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h3l1.5-2h5L14 6h3v10H3z"/><circle cx="10" cy="11" r="3"/></svg>Import a photo</button></div>
+</section>
+<section class="chooser-card practice-picker" aria-labelledby="practice-title">
+<h2 id="practice-title">Practice techniques</h2>
 <fieldset class="level-choices"><legend class="sr-only">Puzzle difficulty</legend>
 <label class="level-card"><input type="radio" name="difficulty" value="easy" checked><strong>Easy</strong><span>Singles</span></label>
 <label class="level-card"><input type="radio" name="difficulty" value="medium"><strong>Medium</strong><span>Pairs &amp; triples</span></label>
 <label class="level-card"><input type="radio" name="difficulty" value="hard"><strong>Hard</strong><span>Fish &amp; wings</span></label>
 <label class="level-card"><input type="radio" name="difficulty" value="expert"><strong>Expert</strong><span>Chains &amp; ALS</span></label>
 </fieldset>
-<p id="level-description" class="level-description"></p>
 <label class="technique-choice" for="technique-focus">Technique focus <span>optional</span></label>
 <select id="technique-focus"><option value="">A mix of techniques</option></select>
-<p id="focus-description" class="focus-description"></p>
+<p id="focus-description" class="focus-description" hidden></p>
+<a id="focus-guide" class="technique-link" target="_blank" rel="noopener noreferrer" hidden>Learn technique <span aria-hidden="true">↗</span></a>
 <div class="chooser-start"><button id="random" class="button primary" disabled>Start puzzle</button><span id="library-count" class="library-count" role="status">Loading practice library…</span></div>
-<div class="own-puzzle"><span>Have a puzzle?</span><button id="enter-puzzle" class="button secondary">Enter a puzzle</button><button id="import-photo" class="button secondary">Import a photo</button></div>
 <p id="chooser-error" class="message error" role="status" hidden></p>
+</section>
+</div>
 </section>
 <div class="workspace">
 <aside id="photo-reference" class="photo-reference" aria-label="Puzzle reference photo" hidden>
@@ -37,7 +52,7 @@
 <label id="candidates-option" hidden><input id="candidates" type="checkbox" checked> Candidates</label>
 <div class="toolbar-actions" role="group" aria-label="Puzzle actions">
 <button id="validate" class="button secondary" title="Check for conflicting clues">Check</button>
-<button id="solve" class="button primary">Show steps</button>
+<button id="solve" class="button primary" title="View the step-by-step solution">Solve</button>
 </div>
 </div>
 <p id="board-hint" class="entry-hint">Type 1–9 for clues; 0, space or another character skips a blank.</p>
@@ -49,7 +64,7 @@
 <aside class="reasoning-panel" aria-label="Solving explanation">
 <div class="reasoning-heading"><span id="step-count" class="step-count"></span><div class="legend step-legend" aria-label="Board colors"><span><i class="legend-clue"></i>Clue</span><span><i class="legend-new"></i>Added</span><span><i class="legend-source"></i>Evidence</span><span><i class="legend-unit"></i>Unit</span><span><i class="legend-removed"></i>Removed</span></div></div>
 <div id="empty-explanation" hidden></div>
-<div id="explanation" hidden><span id="technique" class="technique"></span><h2 id="step-title"></h2><p id="challenge-tip" class="challenge-tip" hidden></p><details id="reasoning-details"><summary>Why this move?</summary><label id="proof-choice" hidden>Proof branch <select id="proof-branch" aria-label="Proof branch"></select></label><p id="visual-summary" class="visual-summary" hidden></p><ul id="details" class="details"></ul></details></div>
+<div id="explanation" hidden><div class="technique-heading"><span id="technique" class="technique"></span><a id="technique-guide" class="technique-link" target="_blank" rel="noopener noreferrer" hidden>Learn technique <span aria-hidden="true">↗</span></a></div><h2 id="step-title"></h2><p id="challenge-tip" class="challenge-tip" hidden></p><details id="reasoning-details"><summary>Why this move?</summary><label id="proof-choice" hidden>Proof branch <select id="proof-branch" aria-label="Proof branch"></select></label><p id="visual-summary" class="visual-summary" hidden></p><ul id="details" class="details"></ul></details></div>
 <div class="playback"><button id="reveal-hint" class="button primary" hidden>Reveal hint</button><button id="all-steps" class="button secondary" hidden>View all steps</button><div class="navigation"><button id="first" class="nav-button" aria-label="First state" disabled>⇤</button><button id="previous" class="nav-button" aria-label="Previous step" disabled>←</button><span id="position">— / —</span><button id="next" class="nav-button" aria-label="Next step" disabled>→</button><button id="last" class="nav-button" aria-label="Last state" disabled>⇥</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Solving step" disabled><button id="edit" class="button secondary edit-button" aria-label="Edit original puzzle" hidden>Edit</button></div>
 </aside>
 </div>

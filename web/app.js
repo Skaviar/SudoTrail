@@ -144,6 +144,18 @@ function message(text, kind = '') {
   $('message').className = `message ${kind}`;
 }
 function puzzleString() { return original.map(value => value || '.').join(''); }
+function renderTechniqueLink(id, technique) {
+  const link = $(id), url = training.guideUrl(technique);
+  link.hidden = !url;
+  if (!url) {
+    link.removeAttribute('href'); link.removeAttribute('aria-label'); link.removeAttribute('title');
+    return;
+  }
+  const site = url.startsWith('https://www.sudokuwiki.org/') ? 'SudokuWiki' : 'HoDoKu';
+  link.href = url;
+  link.setAttribute('aria-label', `Learn ${technique} on ${site} (opens in a new tab)`);
+  link.title = `${site}: ${technique} (opens in a new tab)`;
+}
 function updateControls() {
   $('validate').hidden = $('solve').hidden = solvePending || states.length > 0;
   for (const id of ['random', 'validate', 'solve', 'clear', 'edit', 'import-photo', 'enter-puzzle', 'reveal-hint', 'all-steps']) $(id).disabled = busy;
@@ -155,7 +167,7 @@ function updateControls() {
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
-  $('solve').textContent = busy ? 'Working…' : practiceFocus ? 'Practice step' : 'Show steps';
+  $('solve').textContent = busy ? 'Working…' : practiceFocus ? 'Practice step' : 'Solve';
   for (const { input } of cells) input.readOnly = busy || states.length > 0;
   board.setAttribute('aria-busy', String(busy));
 }
@@ -214,6 +226,7 @@ function render() {
   $('challenge-tip').hidden = !challengePending || !state;
   $('challenge-tip').textContent = challengePending ? training.describe(practiceFocus) : '';
   $('reasoning-details').hidden = !!state && challengePending;
+  renderTechniqueLink('technique-guide', state ? challengePending ? practiceFocus : step?.technique : null);
   $('reveal-hint').hidden = $('all-steps').hidden = !state || !challengePending;
   const proofs = step?.visual?.proofs || [];
   $('proof-choice').hidden = proofs.length < 2;
@@ -344,7 +357,6 @@ function setUpChallenge() {
 function renderChooser() {
   const level = training.levels[selectedDifficulty];
   for (const radio of document.querySelectorAll('[name="difficulty"]')) radio.checked = radio.value === selectedDifficulty;
-  $('level-description').textContent = level.detail;
   const catalog = practiceCatalog.find(level => level.difficulty === selectedDifficulty);
   const select = $('technique-focus'); select.replaceChildren();
   const mixed = document.createElement('option'); mixed.value = ''; mixed.textContent = 'A mix of techniques'; select.append(mixed);
@@ -360,7 +372,9 @@ function renderChooser() {
   }
   if (catalog && ![...select.options].some(option => option.value === selectedTechnique)) selectedTechnique = '';
   select.value = selectedTechnique;
-  $('focus-description').textContent = selectedTechnique ? training.describe(selectedTechnique) : 'Explore the steps when you need a hint.';
+  $('focus-description').hidden = !selectedTechnique;
+  $('focus-description').textContent = selectedTechnique ? training.describe(selectedTechnique) : '';
+  renderTechniqueLink('focus-guide', selectedTechnique);
   const matching = selectedTechnique ? catalog?.techniques.find(t => t.name === selectedTechnique)?.count : catalog?.count;
   $('library-count').textContent = matching ? `${matching} ${selectedTechnique ? 'matching ' : ''}puzzles` : practiceCatalog.length ? 'No matching puzzles' : 'Loading practice library…';
   $('random').textContent = selectedTechnique ? 'Start technique practice' : 'Start puzzle';

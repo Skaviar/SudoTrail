@@ -191,9 +191,15 @@ Test the splitter with `python3 -m unittest discover -s scripts -p 'test_*.py'`.
 ### Browser practice catalog
 
 The website includes **500 Easy, 500 Medium, 500 Hard, and 500 Expert puzzles**.
-The opening screen explains each level and optionally filters for a specific
-technique. Only techniques actually used in matching puzzles are offered, with
-their available puzzle counts. A level describes the hardest technique used;
+The start screen offers **Your puzzle** first, followed by **Practice techniques**,
+under **Crack the grid.**, with a short line identifying the step-by-step Sudoku
+solutions. The start screen uses a dark puzzle-entry card and a light practice
+card; the decorative grid stays hidden on phones to keep the controls in view.
+Typography uses system fonts, lighter interface text, and semibold tabular grid
+digits, with muted sage accents to keep the puzzle visually prominent.
+Short captions summarize the levels; a technique description appears only when
+you select a specific focus. Only techniques actually used in matching puzzles
+are offered, with their available puzzle counts. A level describes the hardest technique used;
 it can also contain techniques from earlier levels.
 
 Choosing a level starts an editable puzzle. Choosing a technique opens a
@@ -400,13 +406,15 @@ go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
 ```
 
 Open `http://127.0.0.1:8080` in a browser. Start by choosing a difficulty and an
-optional technique, **Enter a puzzle**, or **Import a photo**. The interface supports:
+optional technique, **Enter numbers**, or **Import a photo**. The interface supports:
 
 - Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual or photo puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random puzzles, editing after a solve, and solution playback do not auto-advance.
 - Validating clues and highlighting conflicting cells.
 - Loading a practice puzzle by difficulty, optionally focused on one technique.
 - Solving and exploring history using Previous/Next, First/Last, or a slider.
 - Viewing candidate marks, new placements, and crossed-out eliminated candidates.
+- Opening **Learn technique** beside a hint or selected practice focus for its
+  HoDoKu explanation (SudokuWiki for 3D Medusa). Guides open in a new tab.
 - Returning to the original clues for editing, or choosing **New puzzle** to
   return to setup.
 - Automatically saving the latest puzzle in this browser, including edits,
