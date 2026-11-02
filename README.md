@@ -409,9 +409,12 @@ Open `http://127.0.0.1:8080` in a browser. Start by choosing a difficulty and an
 optional technique, **Enter numbers**, or **Import a photo**. The interface supports:
 
 - Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual or photo puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random puzzles, editing after a solve, and solution playback do not auto-advance.
-- Validating clues and highlighting conflicting cells.
+- Automatically checking the grid as numbers are entered or cleared, highlighting
+  conflicting clues and empty cells with no possible digits. Checks run in the
+  background; correcting a conflict clears its warning.
 - Loading a practice puzzle by difficulty, optionally focused on one technique.
-- Solving and exploring history using Previous/Next, First/Last, or a slider.
+- Choosing **Solve step by step** and exploring history using Previous/Next,
+  First/Last, or a slider.
 - Viewing candidate marks, new placements, and crossed-out eliminated candidates.
 - Opening **Learn technique** beside a hint or selected practice focus for its
   HoDoKu explanation (SudokuWiki for 3D Medusa). Guides open in a new tab.

@@ -19,6 +19,8 @@ let solvePending = false;
 let conflicts = new Set();
 let puzzleLabel = savedSession?.puzzleLabel || '';
 let saveTimer;
+let validationTimer;
+let validationRevision = 0;
 let hasSavedPuzzle = savedSession !== null;
 let proofStep = null;
 let selectedProof = 0;
@@ -91,12 +93,14 @@ for (let index = 0; index < 81; index++) {
     $('issues').hidden = true;
     message('');
     render();
+    scheduleValidation();
     if (transcribing && digits && enteredDigit && wasFocused) focusNextEmptyCell(index);
   });
   input.addEventListener('keydown', event => {
     handleGridKey(event, index, cells, original, transcribing && !busy && !solvePending && !states.length);
   });
   input.addEventListener('focus', () => input.select());
+  input.addEventListener('compositionstart', cancelValidation);
   const marks = document.createElement('div');
   marks.className = 'candidate-grid';
   marks.setAttribute('aria-hidden', 'true');
@@ -157,17 +161,16 @@ function renderTechniqueLink(id, technique) {
   link.title = `${site}: ${technique} (opens in a new tab)`;
 }
 function updateControls() {
-  $('validate').hidden = $('solve').hidden = solvePending || states.length > 0;
-  for (const id of ['random', 'validate', 'solve', 'clear', 'edit', 'import-photo', 'enter-puzzle', 'reveal-hint', 'all-steps']) $(id).disabled = busy;
+  $('solve').hidden = solvePending || states.length > 0;
+  for (const id of ['random', 'solve', 'clear', 'edit', 'import-photo', 'enter-puzzle', 'reveal-hint', 'all-steps']) $(id).disabled = busy;
   $('random').disabled = busy || !practiceCatalog.length || !$('technique-focus').selectedOptions[0] || $('technique-focus').selectedOptions[0].disabled;
   $('technique-focus').disabled = busy || !practiceCatalog.length;
   for (const radio of document.querySelectorAll('[name="difficulty"]')) radio.disabled = busy;
-  $('validate').disabled = busy || states.length > 0;
-  $('solve').disabled = busy || states.length > 0 || !original.some(Boolean);
+  $('solve').disabled = busy || states.length > 0 || !original.some(Boolean) || conflicts.size > 0;
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
-  $('solve').textContent = busy ? 'Working…' : practiceFocus ? 'Practice step' : 'Solve';
+  $('solve').textContent = busy ? 'Working…' : 'Solve step by step';
   for (const { input } of cells) input.readOnly = busy || states.length > 0;
   board.setAttribute('aria-busy', String(busy));
 }
@@ -252,12 +255,12 @@ function render() {
   updateControls();
   scheduleSessionSave();
 }
-async function api(path, puzzle) {
+async function api(path, puzzle, { reportIssues = true } = {}) {
   if (window.godokuEngine) {
     const response = await window.godokuEngine.request(path, puzzle);
     const data = response.body;
     if (response.status >= 400) {
-      if (data.issues) showIssues(data.issues);
+      if (reportIssues && data.issues) showIssues(data.issues);
       throw new Error(data.error || data.issues?.[0]?.message || 'The browser solver could not process this puzzle.');
     }
     return data;
@@ -267,13 +270,14 @@ async function api(path, puzzle) {
   });
   const data = await response.json();
   if (!response.ok) {
-    if (data.issues) showIssues(data.issues);
+    if (reportIssues && data.issues) showIssues(data.issues);
     throw new Error(data.error || data.issues?.[0]?.message || 'The request could not be completed.');
   }
   return data;
 }
 async function perform(action, isSolve = false) {
   if (busy) return;
+  cancelValidation();
   busy = true; solvePending = isSolve; updateControls();
   try { await action(); }
   catch (error) {
@@ -289,12 +293,36 @@ function showIssues(issues) {
     const item = document.createElement('li'); item.textContent = issue.message; $('issues').append(item);
   }
   $('issues').hidden = issues.length === 0;
+  // Background checks update the highlights without touching the active input.
+  cells.forEach(({ cell, input }, index) => {
+    cell.classList.toggle('conflict', conflicts.has(index));
+    input.setAttribute('aria-invalid', String(conflicts.has(index)));
+  });
 }
-$('validate').addEventListener('click', () => perform(async () => {
-  const result = await api('/api/validate', puzzleString());
-  showIssues(result.issues);
-  message(result.valid ? 'No conflicts found.' : 'Fix the highlighted cells.', result.valid ? 'success' : 'error');
-}));
+
+function cancelValidation() {
+  clearTimeout(validationTimer);
+  validationRevision++;
+}
+function scheduleValidation() {
+  cancelValidation();
+  if (!entryMode || states.length || !original.some(Boolean)) return;
+  const revision = validationRevision, puzzle = puzzleString();
+  const isCurrent = () => revision === validationRevision && entryMode && !states.length && !busy && puzzle === puzzleString();
+  // Coalesce rapid edits and ignore replies for a different board or mode.
+  validationTimer = setTimeout(async () => {
+    if (!isCurrent()) return;
+    try {
+      const result = await api('/api/validate', puzzle, { reportIssues: false });
+      if (!isCurrent()) return;
+      showIssues(result.issues);
+      message(result.valid ? '' : 'Fix the highlighted cells.', result.valid ? '' : 'error');
+      updateControls();
+    } catch {
+      if (isCurrent()) message('Automatic check unavailable. Edit a cell to retry.', 'error');
+    }
+  }, 150);
+}
 $('solve').addEventListener('click', () => perform(async () => {
   transcribing = false;
   const result = await api('/api/solve', puzzleString());
@@ -318,15 +346,17 @@ $('random').addEventListener('click', () => perform(async () => {
     setUpChallenge();
   }
   message('');
+  scheduleValidation();
 }));
 $('clear').addEventListener('click', () => {
+  cancelValidation();
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
   entryMode = false; practiceFocus = ''; challengePending = false; practiceTarget = -1;
   transcribing = true; referencePhoto = ''; $('reference-image').removeAttribute('src');
   message(''); render(); $('random').focus();
   saveSession(true);
 });
-$('edit').addEventListener('click', () => { states = []; current = 0; challengePending = false; showIssues([]); message(''); render(); });
+$('edit').addEventListener('click', () => { states = []; current = 0; challengePending = false; showIssues([]); message(''); render(); scheduleValidation(); });
 function navigate(index) { challengePending = false; current = Math.max(0, Math.min(states.length - 1, index)); render(); }
 $('reveal-hint').addEventListener('click', () => { if (!busy && practiceTarget > 0) navigate(practiceTarget); });
 $('all-steps').addEventListener('click', () => navigate(0));
@@ -585,8 +615,9 @@ document.addEventListener('godoku:photo-import', event => {
   states = []; current = 0; puzzleLabel = 'Puzzle from your photo';
   entryMode = true; practiceFocus = ''; challengePending = false;
   showIssues([]);
-  message('Photo imported. Check the clues, then validate.');
+  message('');
   render();
+  scheduleValidation();
   cells[Math.max(0, original.findIndex(value => !value))].input.focus();
 });
 
@@ -639,3 +670,4 @@ async function restorePlayback() {
   }
 }
 if (restoringStep !== null) restorePlayback();
+else if (entryMode) scheduleValidation();

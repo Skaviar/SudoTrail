@@ -208,7 +208,7 @@ h2 { margin: 0; }
   .reviewing-steps .board-panel { align-self: stretch; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; overflow: hidden; padding: 0; border: 0; background: transparent; }
   .reviewing-steps .board-toolbar { margin-bottom: 4px; min-height: 24px; }
   .reviewing-steps .board-toolbar label { min-height: 24px; font-size: 10px; }
-  .reviewing-steps .board-toolbar :is(#random,#import-photo,#validate,#solve) { display: none; }
+  .reviewing-steps .board-toolbar #solve { display: none; }
   .reviewing-steps :is(#message,#issues) { display: none; }
   .reviewing-steps .board-stage { display: flex; align-items: flex-start; justify-content: center; overflow: hidden; }
   .reviewing-steps .board-wrap { width: var(--board-space,100%); max-width: 100%; flex: none; }
