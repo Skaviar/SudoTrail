@@ -250,7 +250,7 @@ func runRatingExport(path, destination string, workers, limit int, output io.Wri
 	defer file.Close()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	fmt.Fprintf(output, "\nGodoku — Difficulty Export\nDatabase: %s\nOutput: %s\nWorkers: %d\nRating model: %s\nCounting puzzle records...\n", path, destination, workers, solver.RatingVersion)
+	fmt.Fprintf(output, "\nSudotrail — Difficulty Export\nDatabase: %s\nOutput: %s\nWorkers: %d\nRating model: %s\nCounting puzzle records...\n", path, destination, workers, solver.RatingVersion)
 	total, err := scanBenchmarkCSV(ctx, file, limit, nil)
 	if errors.Is(err, context.Canceled) {
 		fmt.Fprintln(output, "Rating stopped while counting; no output created.")

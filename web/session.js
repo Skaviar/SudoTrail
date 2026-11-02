@@ -3,6 +3,7 @@
 // One puzzle per browser. Store the submission and replay position; the solver
 // rebuilds its history on return so old candidate data cannot undo deductions.
 window.godokuSession = (() => {
+  // Retain the original storage key across the Sudotrail rebrand.
   const key = 'godoku.session.v1';
   let lastSaved = null;
   const validValues = values => Array.isArray(values) && values.length === 81 &&

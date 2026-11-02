@@ -37,7 +37,7 @@ type techniqueRating struct {
 	points int
 }
 
-// These are Godoku weights, not HoDoKu or Sudoku Explainer scores. Keep the
+// These are Sudotrail weights, not HoDoKu or Sudoku Explainer scores. Keep the
 // policy explicit: a new unclassified technique must fail rather than silently
 // assign an incorrect category to millions of exported puzzles.
 var ratingRules = map[string]techniqueRating{

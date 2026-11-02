@@ -172,7 +172,7 @@ func runBenchmark(path string, workers, limit int, output io.Writer) error {
 	defer file.Close()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	fmt.Fprintf(output, "\nGodoku — Database Benchmark\nDatabase: %s\nWorkers: %d\nCounting puzzle records...\n", path, workers)
+	fmt.Fprintf(output, "\nSudotrail — Database Benchmark\nDatabase: %s\nWorkers: %d\nCounting puzzle records...\n", path, workers)
 	// A counting pass gives an exact denominator and ETA without retaining rows.
 	total, err := scanBenchmarkCSV(ctx, file, limit, nil)
 	if errors.Is(err, context.Canceled) {

@@ -1,4 +1,4 @@
-# Godoku
+# Sudotrail
 
 A Go Sudoku solver that explains one logical move at a time.
 
@@ -123,7 +123,7 @@ After **every deduction**, the rating solver restarts at Easy. It exhausts
 all lower tiers before trying an Expert move. The web practice solver follows
 this same order so its hints agree with the difficulty labels and technique
 filters. The solver library's default teaching order can produce a different
-path. These are Godoku-specific ratings of the path found, not a proof that
+path. These are Sudotrail-specific ratings of the path found, not a proof that
 no easier solution path exists.
 
 The label is the hardest tier used. A separate **score** adds the technique
@@ -316,7 +316,7 @@ Deploy without a server:
 Alternatively, with Wrangler installed and authenticated:
 
 ```sh
-npx wrangler pages deploy dist --project-name godoku
+npx wrangler pages deploy dist --project-name sudotrail
 ```
 
 This is a static Pages deployment, not a Cloudflare Worker running Go. It fits
@@ -578,7 +578,7 @@ On phones, the board fits the available viewport above the dock, and the last
 row remains visible when details expand. The elimination summary is inside
 **Why this move?**, alongside detailed reasoning; that section scrolls separately
 when needed, without moving the navigation controls. Returning to editing restores the
-puzzle-entry actions. Detailed reasoning is collapsed by default. Color meanings appear beside the step count. The Godoku title bar disappears once the board contains a puzzle and returns when the board is cleared. Puzzle actions, photo import, and board settings share one horizontal toolbar above the grid; on narrow screens the toolbar scrolls sideways instead of wrapping.
+puzzle-entry actions. Detailed reasoning is collapsed by default. Color meanings appear beside the step count. The Sudotrail title bar disappears once the board contains a puzzle and returns when the board is cleared. Puzzle actions, photo import, and board settings share one horizontal toolbar above the grid; on narrow screens the toolbar scrolls sideways instead of wrapping.
 
 ### Naked subsets
 

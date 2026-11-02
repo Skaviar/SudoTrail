@@ -17,7 +17,7 @@ func main() {
 	static := flag.String("static", "", "serve a built static WASM directory instead of the Go API")
 	flag.Parse()
 	if *static != "" {
-		log.Printf("Godoku static site listening on http://%s", *addr)
+		log.Printf("Sudotrail static site listening on http://%s", *addr)
 		server := &http.Server{Addr: *addr, Handler: http.FileServer(http.Dir(*static)), ReadHeaderTimeout: 5 * time.Second}
 		log.Fatal(server.ListenAndServe())
 		return
@@ -34,7 +34,7 @@ func main() {
 	mux.Handle("/api/", webapi.NewHandler(random))
 	mux.Handle("/", web.Handler())
 	server := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
-	log.Printf("Godoku API listening on http://%s", *addr)
+	log.Printf("Sudotrail API listening on http://%s", *addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

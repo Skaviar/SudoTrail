@@ -16,7 +16,7 @@ func main() {
 	database := flag.String("database", "sudoku-3m.csv", "puzzle CSV path")
 	limit := flag.Int("limit", 0, "benchmark or rate the first N puzzle records (0 = all)")
 	flag.Usage = func() {
-		fmt.Fprintln(flag.CommandLine.Output(), "Godoku commands:")
+		fmt.Fprintln(flag.CommandLine.Output(), "Sudotrail commands:")
 		fmt.Fprintln(flag.CommandLine.Output(), "  make dev                            Run the web UI locally")
 		fmt.Fprintln(flag.CommandLine.Output(), "  go run . -benchmark [-workers N]    Benchmark the database")
 		fmt.Fprintln(flag.CommandLine.Output(), "  go run . -rate [-output path.csv]   Export difficulty ratings")
