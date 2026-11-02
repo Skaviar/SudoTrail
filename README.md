@@ -121,10 +121,11 @@ The current policy is **`godoku-v1`**:
 | Expert | Finned/Sashimi and larger basic fish, complex/Siamese fish, advanced or missing-candidate rectangles, Multi-Coloring/Medusa, chains/ALS, forcing chains/nets |
 
 After **every deduction**, the rating solver restarts at Easy. It exhausts
-all lower tiers before trying an Expert move. The ordinary teaching solver
-keeps its existing technique order, so its displayed path can differ from the
-rating path. These are Godoku-specific ratings of the path found, not a proof
-that no easier solution path exists.
+all lower tiers before trying an Expert move. The web practice solver follows
+this same order so its hints agree with the difficulty labels and technique
+filters. The terminal teaching solver keeps its existing order, so its path can
+differ. These are Godoku-specific ratings of the path found, not a proof that
+no easier solution path exists.
 
 The label is the hardest tier used. A separate **score** adds the technique
 weight for every deduction; it distinguishes the amount of work within a
@@ -165,8 +166,9 @@ go run . -database sudoku-rated.csv
 go run ./cmd/web -database sudoku-rated.csv
 ```
 
-The browser's embedded 1,000-puzzle bank is a separate checked-in catalog;
-exporting this file does not replace it or add a difficulty selector to the UI.
+The browser's balanced practice bank is a separate checked-in catalog. Exporting
+this file does not automatically replace it; see **Browser practice catalog**
+below for the generation command.
 
 Split a rated catalog into separate difficulty files with Python 3.9 or newer
 (no packages to install):
@@ -186,6 +188,42 @@ Unknown difficulty labels or malformed records stop with an error; partial
 files may remain, so use a new output directory for another run.
 
 Test the splitter with `python3 -m unittest discover -s scripts -p 'test_*.py'`.
+
+### Browser practice catalog
+
+The website includes **500 Easy, 500 Medium, 500 Hard, and 500 Expert puzzles**.
+The opening screen explains each level and optionally filters for a specific
+technique. Only techniques actually used in matching puzzles are offered, with
+their available puzzle counts. A level describes the hardest technique used;
+it can also contain techniques from earlier levels.
+
+Choosing a level starts an editable puzzle. Choosing a technique opens a
+challenge immediately before the solver's first use of it, with candidate marks
+visible and the deduction hidden. **Reveal hint** shows the move and its visual
+evidence; **View all steps** returns to the original puzzle's history. **Edit**
+returns to the original editable clues.
+
+To rebuild the bank from your rated CSV:
+
+```sh
+make bank
+# Use more puzzles per level or a different rated input:
+make bank PER_LEVEL=1000 OUTPUT=sudoku-rated.csv
+# Control the output path and sampling seed directly:
+go run ./cmd/buildbank -in sudoku-rated.csv -out internal/puzzlebank/puzzles.json -per-level 500 -seed 20261101
+```
+
+Generation samples across the full rated input with a fixed seed, verifies each
+selected puzzle against its reference solution, and records the techniques used
+by web playback. It requires the current `godoku-v1` rating model and enough
+solved puzzles in every level. It replaces the bank after verification completes;
+the rated CSV remains unchanged. No solution strings are written into the bank.
+Rebuild the website with `make build` after changing it.
+
+The current 2,000-puzzle bank is about **498 KiB of JSON**. The compiled WASM is
+about **4.30 MiB** (sizes vary with Go versions), so there is room to expand the
+catalog. These are file sizes, not browser memory measurements. Normal website
+builds use the checked-in bank and do not read the large CSV.
 
 ## Logical techniques
 
@@ -237,11 +275,10 @@ bitmasks in `candidates.go`.
 ## Static Go WebAssembly build (Cloudflare Pages)
 
 The website can run entirely in the browser: the Go solver compiles to
-WebAssembly and runs in a Web Worker, while 1,000 random puzzles are embedded
-inside that WASM binary. Cloudflare only serves files; it does not execute Go
-or receive puzzle submissions. The full CSV and its solutions are not shipped.
-The checked-in catalog is a fixed sample from the first 10,000 database rows;
-building the static site does not require the large local CSV.
+WebAssembly and runs in a Web Worker, with 2,000 difficulty-rated practice
+puzzles embedded inside that WASM binary. Cloudflare only serves files; it does
+not execute Go or receive puzzle submissions. The full CSV and its solutions
+are not shipped. Building the static site does not require the large local CSV.
 
 Build from the project root with Go 1.25.6 or newer:
 
@@ -299,7 +336,7 @@ The original programs remain available:
 
 The HTTP API and WASM entry point share `internal/puzzleapp`, so snapshots,
 visual guides, errors, and solved/stuck behavior use the same solver logic.
-`internal/puzzlebank` owns the 1,000 embedded puzzles; `cmd/wasm` bridges Go to
+`internal/puzzlebank` owns the balanced practice catalog; `cmd/wasm` bridges Go to
 JavaScript. `web/engine.js` and `web/solver-worker.js` load and call WASM without
 blocking board input or rendering. The generated HTML selects WASM mode; the
 server-embedded HTML selects API mode.
@@ -361,24 +398,28 @@ Run `go run ./cmd/web` from the project root. The website and API listen on
 go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
 ```
 
-Open `http://127.0.0.1:8080` in a browser. The interface supports:
+Open `http://127.0.0.1:8080` in a browser. Start by choosing a difficulty and an
+optional technique, **Enter a puzzle**, or **Import a photo**. The interface supports:
 
 - Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual or photo puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random puzzles, editing after a solve, and solution playback do not auto-advance.
 - Validating clues and highlighting conflicting cells.
-- Loading a random database puzzle.
+- Loading a practice puzzle by difficulty, optionally focused on one technique.
 - Solving and exploring history using Previous/Next, First/Last, or a slider.
 - Viewing candidate marks, new placements, and crossed-out eliminated candidates.
-- Returning to the original clues for editing, or clearing the board.
+- Returning to the original clues for editing, or choosing **New puzzle** to
+  return to setup.
 - Automatically saving the latest puzzle in this browser, including edits,
   clue colors, photo reference, display settings, and the selected solving step.
-  Refreshing or returning to the site restores it; **Clear** deletes the save.
+  Technique challenges also preserve their target and hidden-hint state.
+  Refreshing or returning to the site restores it; **New puzzle** deletes the save.
 
 Progress uses `localStorage` on the same browser and site address, with no
 account, cookies, or server storage. It does not sync between devices. Solving
 history is rebuilt from the saved submission when reopening playback. Clearing
 site data removes the save. If the browser blocks saving or cannot fit a photo,
 the interface reports it while keeping editing and solving available.
-Storage behavior can also be checked with `node --test web/session_test.mjs`
+Storage and practice helpers can also be checked with
+`node --test web/session_test.mjs web/training_test.mjs`
 when Node is available; Node is not required to build or run the app.
 
 The HTML, CSS, and JavaScript in `web/` are embedded in the Go executable.
@@ -386,9 +427,11 @@ Restart `go run ./cmd/web` after changing frontend files. No Node build or
 separate frontend server is required.
 
 Benchmarks remain available only through the terminal app (`go run .`).
-The web server indexes CSV record offsets once at startup and reads a random
-record on demand. It does not return the database solution. If the CSV is
-missing or unusable, manual validation and solving still work; random returns 503.
+The practice library, manual entry, validation, and solving work without a CSV.
+The native web server also retains unfiltered full-database random selection:
+it indexes CSV offsets at startup and reads one record on demand, without
+returning the solution. Only that legacy unfiltered route returns 503 when the
+CSV is missing or unusable.
 
 ### Validate a puzzle
 
@@ -430,9 +473,26 @@ has `row`, `col`, and `number`. Candidate masks preserve bit positions 1–9.
 The first state is always the original board. `stuck` means supported techniques
 made no further progress; it does not mean the puzzle is unsolvable.
 
-### Load a random puzzle
+### Choose a practice puzzle
 
-`GET /api/puzzles/random` returns:
+`GET /api/puzzles/catalog` returns the available difficulty levels, their puzzle
+counts, and technique entries with `name`, `count`, and `difficulty`.
+
+`GET /api/puzzles/random?source=practice&difficulty=hard&technique=XY-Wing`
+returns a matching embedded puzzle:
+
+```text
+{"id":"123","puzzle":"<81 characters>","difficulty":"hard","techniques":["Hidden Single","XY-Wing", "..."]}
+```
+
+The `technique` filter is optional and case-sensitive; URL-encode technique
+names containing spaces. `exclude=<id>` avoids immediately repeating that puzzle
+when another match exists. Invalid filters or no matches return HTTP 400. No
+completed solution is included. These routes work in both native and WASM mode.
+
+### Load from the full database
+
+In native API mode, `GET /api/puzzles/random` without filters uses the CSV and returns:
 
 ```text
 {"id":"1","puzzle":"<81 characters>","difficulty":"2.2"}

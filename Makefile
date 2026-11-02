@@ -7,8 +7,9 @@ DIST ?= dist
 WORKERS ?=
 LIMIT ?= 0
 OUTPUT ?= sudoku-rated.csv
+PER_LEVEL ?= 500
 
-.PHONY: help run benchmark rate web build preview dev test race vet check fmt
+.PHONY: help run benchmark rate bank web build preview dev test race vet check fmt
 
 help:
 	@printf '%s\n' \
@@ -20,6 +21,7 @@ help:
 	  '  make run      Run the terminal app (including benchmark menu)' \
 	  '  make benchmark Run the CSV benchmark (WORKERS=N LIMIT=N)' \
 	  '  make rate     Export difficulty ratings (WORKERS=N LIMIT=N OUTPUT=path.csv)' \
+	  '  make bank     Rebuild the balanced browser catalog (PER_LEVEL=500)' \
 	  '  make test     Run Go tests' \
 	  '  make race     Run Go tests with the race detector' \
 	  '  make vet      Run go vet' \
@@ -36,6 +38,9 @@ benchmark:
 
 rate:
 	$(GO) run . -rate -database "$(DATABASE)" -output "$(OUTPUT)" $(if $(WORKERS),-workers "$(WORKERS)") -limit "$(LIMIT)"
+
+bank:
+	$(GO) run ./cmd/buildbank -in "$(OUTPUT)" -per-level "$(PER_LEVEL)"
 
 web:
 	$(GO) run ./cmd/web -addr "$(ADDR)" -database "$(DATABASE)"

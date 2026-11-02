@@ -4,6 +4,7 @@ const $ = id => document.getElementById(id);
 const board = $('board');
 const cells = [];
 const savedSession = window.godokuSession.load();
+const training = window.godokuTraining;
 let original = savedSession?.original || Array(81).fill(0);
 // Preserve puzzle provenance separately from the editable submission.
 // null means a custom puzzle is still being entered.
@@ -21,6 +22,14 @@ let saveTimer;
 let hasSavedPuzzle = savedSession !== null;
 let proofStep = null;
 let selectedProof = 0;
+let entryMode = savedSession !== null;
+let selectedDifficulty = savedSession?.selectedDifficulty || 'easy';
+let selectedTechnique = savedSession?.selectedTechnique || '';
+let practiceFocus = savedSession?.practiceFocus || '';
+let challengePending = savedSession?.challengePending === true;
+let practiceTarget = -1;
+let lastPuzzleID = savedSession?.lastPuzzleID || '';
+let practiceCatalog = [];
 $('candidates').checked = savedSession?.candidates ?? true;
 $('visuals').checked = savedSession?.guides ?? true;
 if (referencePhoto) $('reference-image').src = referencePhoto;
@@ -38,6 +47,7 @@ function saveSession(clearEmpty = false) {
   }
   const snapshot = hasPuzzle ? {
     original, givenClues, transcribing, referencePhoto, puzzleLabel,
+    selectedDifficulty, selectedTechnique, practiceFocus, challengePending, lastPuzzleID,
     reviewing: states.length > 0 || restoringStep !== null,
     current: restoringStep ?? current,
     candidates: $('candidates').checked, guides: $('visuals').checked
@@ -136,13 +146,16 @@ function message(text, kind = '') {
 function puzzleString() { return original.map(value => value || '.').join(''); }
 function updateControls() {
   $('validate').hidden = $('solve').hidden = solvePending || states.length > 0;
-  for (const id of ['random', 'validate', 'solve', 'clear', 'edit', 'import-photo']) $(id).disabled = busy;
+  for (const id of ['random', 'validate', 'solve', 'clear', 'edit', 'import-photo', 'enter-puzzle', 'reveal-hint', 'all-steps']) $(id).disabled = busy;
+  $('random').disabled = busy || !practiceCatalog.length || !$('technique-focus').selectedOptions[0] || $('technique-focus').selectedOptions[0].disabled;
+  $('technique-focus').disabled = busy || !practiceCatalog.length;
+  for (const radio of document.querySelectorAll('[name="difficulty"]')) radio.disabled = busy;
   $('validate').disabled = busy || states.length > 0;
   $('solve').disabled = busy || states.length > 0 || !original.some(Boolean);
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
-  $('solve').textContent = busy ? 'Working…' : 'Solve';
+  $('solve').textContent = busy ? 'Working…' : practiceFocus ? 'Practice step' : 'Show steps';
   for (const { input } of cells) input.readOnly = busy || states.length > 0;
   board.setAttribute('aria-busy', String(busy));
 }
@@ -150,17 +163,20 @@ function render() {
   const state = states[current];
   const enteringPlayback = !!state && !document.body.classList.contains('reviewing-steps');
   document.body.classList.toggle('reviewing-steps', !!state);
-  const loaded = !!state || givenClues !== null || original.some(Boolean);
+  const choosing = !entryMode && !state;
+  $('puzzle-chooser').hidden = !choosing;
+  document.querySelector('.workspace').hidden = choosing;
+  const loaded = !choosing;
   document.body.classList.toggle('puzzle-loaded', loaded);
-  $('guides-option').hidden = $('candidates-option').hidden = !loaded;
-  $('random').hidden = $('import-photo').hidden = loaded;
+  document.body.classList.toggle('practice-challenge', !!state && challengePending);
+  $('guides-option').hidden = $('candidates-option').hidden = !state;
   const showPhoto = !!referencePhoto && !state;
   $('photo-reference').hidden = !showPhoto;
   document.body.classList.toggle('photo-entry', showPhoto);
   if (enteringPlayback && window.matchMedia('(max-width: 800px)').matches) {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }
-  const step = state?.step;
+  const step = challengePending ? null : state?.step;
   if (proofStep !== step) { proofStep = step; selectedProof = 0; }
   const removed = new Set((step?.eliminations || []).map(e => `${e.row},${e.col},${e.number}`));
   for (let index = 0; index < 81; index++) {
@@ -190,10 +206,15 @@ function render() {
   $('board-hint').hidden = !!state || !transcribing;
   $('board-hint').textContent = 'Type 1–9 for clues; 0, space or another character skips a blank.';
   $('step-count').textContent = state ? `${states.length - 1} steps` : '';
+  if (state && practiceFocus) $('step-count').textContent = `${practiceFocus} practice`;
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
   $('timeline').max = Math.max(0, states.length - 1);
   $('timeline').value = current;
   $('details').replaceChildren();
+  $('challenge-tip').hidden = !challengePending || !state;
+  $('challenge-tip').textContent = challengePending ? training.describe(practiceFocus) : '';
+  $('reasoning-details').hidden = !!state && challengePending;
+  $('reveal-hint').hidden = $('all-steps').hidden = !state || !challengePending;
   const proofs = step?.visual?.proofs || [];
   $('proof-choice').hidden = proofs.length < 2;
   $('proof-branch').replaceChildren();
@@ -203,8 +224,8 @@ function render() {
     option.selected = i === selectedProof; $('proof-branch').append(option);
   }
   if (state) {
-    $('technique').textContent = step?.technique || 'Initial puzzle';
-    $('step-title').textContent = step?.explanation || 'Original puzzle';
+    $('technique').textContent = challengePending ? 'Your turn' : step?.technique || 'Initial puzzle';
+    $('step-title').textContent = challengePending ? `Find the ${practiceFocus}.` : step?.explanation || 'Original puzzle';
     const branch = proofs[selectedProof];
     const details = branch ? branch.nodes.map((node, i) =>
       `${i + 1}. R${node.row + 1}C${node.col + 1} ${node.true ? '=' : '≠'} ${node.number}: ${node.reason}${node.parents?.length ? ` (from ${node.parents.map(p => p + 1).join(', ')})` : ''}.`
@@ -242,7 +263,10 @@ async function perform(action, isSolve = false) {
   if (busy) return;
   busy = true; solvePending = isSolve; updateControls();
   try { await action(); }
-  catch (error) { message(error.message || 'Could not reach the server. Please try again.', 'error'); }
+  catch (error) {
+    const text = error.message || 'Could not reach the solver. Please try again.';
+    message(text, 'error'); $('chooser-error').textContent = text; $('chooser-error').hidden = entryMode;
+  }
   finally { busy = false; solvePending = false; render(); }
 }
 function showIssues(issues) {
@@ -263,25 +287,36 @@ $('solve').addEventListener('click', () => perform(async () => {
   const result = await api('/api/solve', puzzleString());
   if (givenClues === null) givenClues = [...original];
   showIssues([]); states = result.states; current = 0;
+  setUpChallenge();
   message(result.solved ? '' : 'Stopped: no more supported moves.');
 }, true));
 $('random').addEventListener('click', () => perform(async () => {
-  const result = await api('/api/puzzles/random');
+  const query = new URLSearchParams({ source: 'practice', difficulty: selectedDifficulty, technique: selectedTechnique, exclude: lastPuzzleID });
+  const result = await api(`/api/puzzles/random?${query}`);
   original = [...result.puzzle].map(ch => /[1-9]/.test(ch) ? Number(ch) : 0);
   givenClues = [...original];
   transcribing = false; referencePhoto = ''; $('reference-image').removeAttribute('src');
-  states = []; current = 0; showIssues([]);
-  puzzleLabel = `Puzzle #${result.id}${result.difficulty ? ` · Difficulty ${result.difficulty}` : ''}`;
+  states = []; current = 0; challengePending = false; practiceTarget = -1; showIssues([]);
+  entryMode = true; practiceFocus = selectedTechnique; lastPuzzleID = result.id;
+  puzzleLabel = `${training.levels[result.difficulty]?.title || result.difficulty} · Puzzle #${result.id}`;
+  if (practiceFocus) {
+    const solution = await api('/api/solve', puzzleString());
+    states = solution.states;
+    setUpChallenge();
+  }
   message('');
 }));
 $('clear').addEventListener('click', () => {
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
+  entryMode = false; practiceFocus = ''; challengePending = false; practiceTarget = -1;
   transcribing = true; referencePhoto = ''; $('reference-image').removeAttribute('src');
-  message(''); render(); cells[0].input.focus();
+  message(''); render(); $('random').focus();
   saveSession(true);
 });
-$('edit').addEventListener('click', () => { states = []; current = 0; showIssues([]); message(''); render(); });
-function navigate(index) { current = Math.max(0, Math.min(states.length - 1, index)); render(); }
+$('edit').addEventListener('click', () => { states = []; current = 0; challengePending = false; showIssues([]); message(''); render(); });
+function navigate(index) { challengePending = false; current = Math.max(0, Math.min(states.length - 1, index)); render(); }
+$('reveal-hint').addEventListener('click', () => { if (!busy && practiceTarget > 0) navigate(practiceTarget); });
+$('all-steps').addEventListener('click', () => navigate(0));
 $('first').addEventListener('click', () => navigate(0));
 $('previous').addEventListener('click', () => navigate(current - 1));
 $('next').addEventListener('click', () => navigate(current + 1));
@@ -292,6 +327,63 @@ $('visuals').addEventListener('change', render);
 $('proof-branch').addEventListener('change', event => { selectedProof = Number(event.target.value); render(); });
 new ResizeObserver(() => renderVisuals(states[current], states[current]?.step)).observe(board);
 render();
+
+function setUpChallenge() {
+  if (!practiceFocus) return;
+  practiceTarget = training.targetIndex(states, practiceFocus);
+  if (practiceTarget < 1) {
+    const focus = practiceFocus;
+    practiceFocus = ''; states = []; current = 0; challengePending = false;
+    throw Error(`This position no longer needs ${focus}. You can still view its steps or choose another puzzle.`);
+  }
+  current = practiceTarget - 1;
+  challengePending = true;
+  $('candidates').checked = true;
+}
+
+function renderChooser() {
+  const level = training.levels[selectedDifficulty];
+  for (const radio of document.querySelectorAll('[name="difficulty"]')) radio.checked = radio.value === selectedDifficulty;
+  $('level-description').textContent = level.detail;
+  const catalog = practiceCatalog.find(level => level.difficulty === selectedDifficulty);
+  const select = $('technique-focus'); select.replaceChildren();
+  const mixed = document.createElement('option'); mixed.value = ''; mixed.textContent = 'A mix of techniques'; select.append(mixed);
+  for (const currentLevel of [true, false]) {
+    const techniques = (catalog?.techniques || []).filter(t => (t.difficulty === selectedDifficulty) === currentLevel);
+    if (!techniques.length) continue;
+    const group = document.createElement('optgroup'); group.label = currentLevel ? `${level.title} techniques` : 'Earlier techniques in these puzzles';
+    for (const technique of techniques) {
+      const option = document.createElement('option'); option.value = technique.name;
+      option.textContent = `${technique.name} (${technique.count})`; group.append(option);
+    }
+    select.append(group);
+  }
+  if (catalog && ![...select.options].some(option => option.value === selectedTechnique)) selectedTechnique = '';
+  select.value = selectedTechnique;
+  $('focus-description').textContent = selectedTechnique ? training.describe(selectedTechnique) : 'Explore the steps when you need a hint.';
+  const matching = selectedTechnique ? catalog?.techniques.find(t => t.name === selectedTechnique)?.count : catalog?.count;
+  $('library-count').textContent = matching ? `${matching} ${selectedTechnique ? 'matching ' : ''}puzzles` : practiceCatalog.length ? 'No matching puzzles' : 'Loading practice library…';
+  $('random').textContent = selectedTechnique ? 'Start technique practice' : 'Start puzzle';
+  select.disabled = busy || !catalog;
+  updateControls();
+}
+
+for (const radio of document.querySelectorAll('[name="difficulty"]')) radio.addEventListener('change', event => {
+  selectedDifficulty = event.target.value; selectedTechnique = ''; renderChooser();
+});
+$('technique-focus').addEventListener('change', event => { selectedTechnique = event.target.value; renderChooser(); });
+$('enter-puzzle').addEventListener('click', () => {
+  if (busy) return;
+  entryMode = true; render(); cells[0].input.focus();
+});
+renderChooser();
+(async () => {
+  try { practiceCatalog = await api('/api/puzzles/catalog'); renderChooser(); }
+  catch {
+    $('library-count').textContent = 'Practice library unavailable';
+    $('chooser-error').textContent = 'You can still enter your own puzzle or import a photo.'; $('chooser-error').hidden = false;
+  }
+})();
 
 // Placements explain existing restrictions. Only explicit elimination steps
 // remove candidates; the UI never infers peer cleanup from a placement diff.
@@ -310,6 +402,7 @@ function visualData(state, step) {
   };
 }
 function renderVisuals(state, step) {
+  if (challengePending) step = null;
   const overlay = $('deduction-overlay');
   overlay.replaceChildren();
   for (const { cell, marks } of cells) {
@@ -476,6 +569,7 @@ document.addEventListener('godoku:photo-import', event => {
   if (referencePhoto) $('reference-image').src = referencePhoto;
   else $('reference-image').removeAttribute('src');
   states = []; current = 0; puzzleLabel = 'Puzzle from your photo';
+  entryMode = true; practiceFocus = ''; challengePending = false;
   showIssues([]);
   message('Photo imported. Check the clues, then validate.');
   render();
@@ -520,6 +614,8 @@ async function restorePlayback() {
     const result = await api('/api/solve', puzzleString());
     states = result.states;
     current = Math.max(0, Math.min(restoringStep, states.length - 1));
+    practiceTarget = practiceFocus ? training.targetIndex(states, practiceFocus) : -1;
+    if (practiceTarget < 1 || current !== practiceTarget - 1) challengePending = false;
     if (givenClues === null) givenClues = [...original];
     message(result.solved ? '' : 'Stopped: no more supported moves.');
   } catch {

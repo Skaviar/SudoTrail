@@ -27,7 +27,9 @@ func Solve(puzzle string) (SolveResponse, error) {
 	if err != nil {
 		return SolveResponse{}, err
 	}
-	history := s.Solve()
+	// Match the catalog's difficulty order so a promised practice technique
+	// really occurs in the history shown to the learner.
+	history := s.SolvePractice()
 	result := SolveResponse{Solved: s.IsSolved(), Status: "stuck", States: make([]StateResponse, 0, history.Len())}
 	if result.Solved {
 		result.Status = "solved"

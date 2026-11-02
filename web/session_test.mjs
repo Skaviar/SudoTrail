@@ -79,3 +79,15 @@ test('blocked storage returns failures without throwing', () => {
   assert.equal(page.session.save(snapshot()), 'failed');
   assert.equal(page.session.save(null), 'failed');
 });
+
+test('technique challenges resume without revealing the pending hint', () => {
+  const page = browser();
+  const practice = { ...snapshot(), selectedDifficulty: 'hard', selectedTechnique: 'XY-Wing', practiceFocus: 'XY-Wing', challengePending: true, lastPuzzleID: '349' };
+  assert.equal(page.session.save(practice), 'saved');
+  assert.deepEqual(JSON.parse(JSON.stringify(browser(page.storage).session.load())), practice);
+  const invalid = { version: 1, ...practice, selectedDifficulty: 'impossible', practiceFocus: Array(120).fill('x').join(''), reviewing: false };
+  const returned = browser(new Map([[key, JSON.stringify(invalid)]])).session.load();
+  assert.equal(returned.selectedDifficulty, undefined);
+  assert.equal(returned.practiceFocus, undefined);
+  assert.equal(returned.challengePending, false);
+});

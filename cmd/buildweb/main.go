@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	"github.com/s-threepio/godoku/internal/puzzlebank"
 )
 
 func main() {
@@ -23,7 +25,7 @@ func build(out string) error {
 	if err := os.MkdirAll(out, 0755); err != nil {
 		return err
 	}
-	for _, name := range []string{"index.html", "styles.css", "app.js", "photo.js", "engine.js", "session.js", "solver-worker.js"} {
+	for _, name := range []string{"index.html", "styles.css", "app.js", "photo.js", "engine.js", "session.js", "solver-worker.js", "training.js"} {
 		content, err := os.ReadFile(filepath.Join("web", name))
 		if err != nil {
 			return err
@@ -59,6 +61,10 @@ func build(out string) error {
 	if info.Size() >= 25*1024*1024 {
 		return fmt.Errorf("WASM exceeds Cloudflare Pages' 25 MiB asset limit")
 	}
-	fmt.Printf("Static site ready in %s (Go WASM: %.2f MiB, 1,000 embedded puzzles).\n", out, float64(info.Size())/(1024*1024))
+	total := 0
+	for _, level := range puzzlebank.Catalog() {
+		total += level.Count
+	}
+	fmt.Printf("Static site ready in %s (Go WASM: %.2f MiB, %d embedded puzzles).\n", out, float64(info.Size())/(1024*1024), total)
 	return nil
 }

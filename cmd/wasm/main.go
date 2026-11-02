@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/url"
 	"syscall/js"
 
 	"github.com/s-threepio/godoku/internal/puzzleapp"
@@ -26,8 +27,12 @@ func request(_ js.Value, args []js.Value) (result any) {
 		return `{"status":400,"body":{"error":"invalid solver request"}}`
 	}
 	path, puzzle := args[0].String(), args[1].String()
+	parsed, parseErr := url.Parse(path)
+	if parseErr != nil {
+		return `{"status":400,"body":{"error":"invalid solver operation"}}`
+	}
 	reply := response{Status: 200}
-	switch path {
+	switch parsed.Path {
 	case "/api/validate":
 		reply.Body = puzzleapp.Validate(puzzle)
 	case "/api/solve":
@@ -45,7 +50,16 @@ func request(_ js.Value, args []js.Value) (result any) {
 			reply.Body = solved
 		}
 	case "/api/puzzles/random":
-		reply.Body = puzzlebank.Random()
+		query := parsed.Query()
+		selected, err := puzzlebank.Select(puzzlebank.Selection{Difficulty: query.Get("difficulty"), Technique: query.Get("technique"), Exclude: query.Get("exclude")})
+		if err != nil {
+			reply.Status = 400
+			reply.Body = map[string]string{"error": err.Error()}
+		} else {
+			reply.Body = selected
+		}
+	case "/api/puzzles/catalog":
+		reply.Body = puzzlebank.Catalog()
 	default:
 		reply.Status = 404
 		reply.Body = map[string]string{"error": "unknown solver operation"}

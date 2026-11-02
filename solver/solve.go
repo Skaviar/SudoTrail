@@ -3,12 +3,22 @@ package solver
 // SolveStep separates placement from its peer-candidate cleanup. The pending
 // cleanup always runs before another technique can inspect the candidates.
 func (s *Sudoku) SolveStep() (Step, bool) {
+	return s.solveStep(s.applyTechnique)
+}
+
+// SolvePracticeStep uses the same easier-tier-first order as the catalog's
+// difficulty rating, while retaining separate placement and cleanup steps.
+func (s *Sudoku) SolvePracticeStep() (Step, bool) {
+	return s.solveStep(s.applyRatingTechnique)
+}
+
+func (s *Sudoku) solveStep(apply func() (Step, bool)) (Step, bool) {
 	if step, ok := s.applyPendingCandidates(); ok {
 		return step, true
 	}
 	s.deferPeerUpdates = true
 	defer func() { s.deferPeerUpdates = false }()
-	step, ok := s.applyTechnique()
+	step, ok := apply()
 	if ok {
 		if step.Number > 0 {
 			step.Kind = "placement"
@@ -171,9 +181,18 @@ func (s *Sudoku) applyAdvancedTechniques() (Step, bool) {
 // Solve applies available techniques and returns the complete history.
 // Inspect IsSolved afterward to distinguish a solved puzzle from a stuck one.
 func (s *Sudoku) Solve() *SolverHistory {
+	return s.solveHistory(s.SolveStep)
+}
+
+// SolvePractice records a history using the catalog's difficulty order.
+func (s *Sudoku) SolvePractice() *SolverHistory {
+	return s.solveHistory(s.SolvePracticeStep)
+}
+
+func (s *Sudoku) solveHistory(next func() (Step, bool)) *SolverHistory {
 	history := NewSolverHistory(s)
 	for {
-		step, ok := s.SolveStep()
+		step, ok := next()
 		if !ok {
 			return history
 		}

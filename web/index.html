@@ -3,11 +3,28 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Godoku</title>
-<link rel="stylesheet" href="/styles.css"><script src="/engine.js" defer></script><script src="/session.js" defer></script><script src="/app.js" defer></script><script src="/photo.js" defer></script>
+<link rel="stylesheet" href="/styles.css"><script src="/engine.js" defer></script><script src="/session.js" defer></script><script src="/training.js" defer></script><script src="/app.js" defer></script><script src="/photo.js" defer></script>
 </head>
 <body>
 <header><a class="brand" href="/" aria-label="Godoku home"><span class="brand-mark" aria-hidden="true">▦</span> godoku<span class="brand-dot">.</span></a></header>
 <main>
+<section id="puzzle-chooser" class="puzzle-chooser" aria-labelledby="chooser-title">
+<h1 id="chooser-title">Choose a puzzle</h1>
+<p class="chooser-intro">Practice a level or a technique.</p>
+<fieldset class="level-choices"><legend class="sr-only">Puzzle difficulty</legend>
+<label class="level-card"><input type="radio" name="difficulty" value="easy" checked><strong>Easy</strong><span>Singles</span></label>
+<label class="level-card"><input type="radio" name="difficulty" value="medium"><strong>Medium</strong><span>Pairs &amp; triples</span></label>
+<label class="level-card"><input type="radio" name="difficulty" value="hard"><strong>Hard</strong><span>Fish &amp; wings</span></label>
+<label class="level-card"><input type="radio" name="difficulty" value="expert"><strong>Expert</strong><span>Chains &amp; ALS</span></label>
+</fieldset>
+<p id="level-description" class="level-description"></p>
+<label class="technique-choice" for="technique-focus">Technique focus <span>optional</span></label>
+<select id="technique-focus"><option value="">A mix of techniques</option></select>
+<p id="focus-description" class="focus-description"></p>
+<div class="chooser-start"><button id="random" class="button primary" disabled>Start puzzle</button><span id="library-count" class="library-count" role="status">Loading practice library…</span></div>
+<div class="own-puzzle"><span>Have a puzzle?</span><button id="enter-puzzle" class="button secondary">Enter a puzzle</button><button id="import-photo" class="button secondary">Import a photo</button></div>
+<p id="chooser-error" class="message error" role="status" hidden></p>
+</section>
 <div class="workspace">
 <aside id="photo-reference" class="photo-reference" aria-label="Puzzle reference photo" hidden>
 <h2 class="board-title">Photo</h2><img id="reference-image" alt="Imported Sudoku grid for checking the clues">
@@ -15,14 +32,12 @@
 <section class="board-panel" aria-label="Sudoku workspace">
 <h2 id="board-title" class="board-title">Enter a puzzle</h2>
 <div class="board-toolbar" role="group" aria-label="Puzzle controls">
-<button id="random" class="button secondary" title="Load a random puzzle">↻ Random</button>
-<button id="import-photo" class="button secondary" aria-label="Import a photo">▧ Photo</button>
+<button id="clear" class="button secondary" aria-label="Choose a new puzzle">New puzzle</button>
 <label id="guides-option" hidden><input id="visuals" type="checkbox" checked> Guides</label>
 <label id="candidates-option" hidden><input id="candidates" type="checkbox" checked> Candidates</label>
 <div class="toolbar-actions" role="group" aria-label="Puzzle actions">
-<button id="clear" class="button secondary">Clear</button>
-<button id="validate" class="button secondary">Validate</button>
-<button id="solve" class="button primary">Solve</button>
+<button id="validate" class="button secondary" title="Check for conflicting clues">Check</button>
+<button id="solve" class="button primary">Show steps</button>
 </div>
 </div>
 <p id="board-hint" class="entry-hint">Type 1–9 for clues; 0, space or another character skips a blank.</p>
@@ -34,8 +49,8 @@
 <aside class="reasoning-panel" aria-label="Solving explanation">
 <div class="reasoning-heading"><span id="step-count" class="step-count"></span><div class="legend step-legend" aria-label="Board colors"><span><i class="legend-clue"></i>Clue</span><span><i class="legend-new"></i>Added</span><span><i class="legend-source"></i>Evidence</span><span><i class="legend-unit"></i>Unit</span><span><i class="legend-removed"></i>Removed</span></div></div>
 <div id="empty-explanation" hidden></div>
-<div id="explanation" hidden><span id="technique" class="technique"></span><h2 id="step-title"></h2><details id="reasoning-details"><summary>Why this move?</summary><label id="proof-choice" hidden>Proof branch <select id="proof-branch" aria-label="Proof branch"></select></label><p id="visual-summary" class="visual-summary" hidden></p><ul id="details" class="details"></ul></details></div>
-<div class="playback"><div class="navigation"><button id="first" class="nav-button" aria-label="First state" disabled>⇤</button><button id="previous" class="nav-button" aria-label="Previous step" disabled>←</button><span id="position">— / —</span><button id="next" class="nav-button" aria-label="Next step" disabled>→</button><button id="last" class="nav-button" aria-label="Last state" disabled>⇥</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Solving step" disabled><button id="edit" class="button secondary edit-button" aria-label="Edit original puzzle" hidden>Edit</button></div>
+<div id="explanation" hidden><span id="technique" class="technique"></span><h2 id="step-title"></h2><p id="challenge-tip" class="challenge-tip" hidden></p><details id="reasoning-details"><summary>Why this move?</summary><label id="proof-choice" hidden>Proof branch <select id="proof-branch" aria-label="Proof branch"></select></label><p id="visual-summary" class="visual-summary" hidden></p><ul id="details" class="details"></ul></details></div>
+<div class="playback"><button id="reveal-hint" class="button primary" hidden>Reveal hint</button><button id="all-steps" class="button secondary" hidden>View all steps</button><div class="navigation"><button id="first" class="nav-button" aria-label="First state" disabled>⇤</button><button id="previous" class="nav-button" aria-label="Previous step" disabled>←</button><span id="position">— / —</span><button id="next" class="nav-button" aria-label="Next step" disabled>→</button><button id="last" class="nav-button" aria-label="Last state" disabled>⇥</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Solving step" disabled><button id="edit" class="button secondary edit-button" aria-label="Edit original puzzle" hidden>Edit</button></div>
 </aside>
 </div>
 </main>

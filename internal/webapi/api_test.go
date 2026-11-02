@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/s-threepio/godoku/internal/puzzlebank"
 )
 
 func request(t *testing.T, h http.Handler, method, path, body string) *httptest.ResponseRecorder {
@@ -15,6 +18,40 @@ func request(t *testing.T, h http.Handler, method, path, body string) *httptest.
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
 	return w
+}
+
+func TestPracticeCatalogAndFilteredPuzzlesWithoutCSV(t *testing.T) {
+	h := NewHandler(nil)
+	w := request(t, h, "GET", "/api/puzzles/catalog", "")
+	var levels []puzzlebank.Level
+	if err := json.Unmarshal(w.Body.Bytes(), &levels); err != nil || w.Code != 200 || len(levels) != 4 {
+		t.Fatal("missing practice catalog")
+	}
+	for _, level := range levels {
+		query := url.Values{"source": {"practice"}, "difficulty": {level.Difficulty}, "technique": {level.Techniques[0].Name}}
+		w := request(t, h, "GET", "/api/puzzles/random?"+query.Encode(), "")
+		var p puzzlebank.Puzzle
+		if err := json.Unmarshal(w.Body.Bytes(), &p); err != nil || w.Code != 200 || p.Difficulty != level.Difficulty {
+			t.Fatalf("wrong practice puzzle: %s", w.Body.String())
+		}
+		solved := request(t, h, "POST", "/api/solve", `{"puzzle":"`+p.Puzzle+`"}`)
+		var history solveResponse
+		if err := json.Unmarshal(solved.Body.Bytes(), &history); err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, state := range history.States {
+			found = found || state.Step != nil && state.Step.Technique == query.Get("technique")
+		}
+		if !found {
+			t.Fatal("requested practice technique is missing from the actual web history")
+		}
+	}
+	for _, query := range []string{"difficulty=impossible", "difficulty=easy&technique=Forcing+Net"} {
+		if w := request(t, h, "GET", "/api/puzzles/random?"+query, ""); w.Code != 400 {
+			t.Fatal("invalid practice filter was ignored")
+		}
+	}
 }
 func TestValidation(t *testing.T) {
 	h := NewHandler(nil)

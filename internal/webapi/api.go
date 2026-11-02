@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/s-threepio/godoku/internal/puzzleapp"
+	"github.com/s-threepio/godoku/internal/puzzlebank"
 	"github.com/s-threepio/godoku/solver"
 )
 
@@ -20,6 +21,9 @@ type solveResponse = puzzleapp.SolveResponse
 // A nil random source leaves manual validation and solving available.
 func NewHandler(random func() (RandomPuzzle, error)) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/puzzles/catalog", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, puzzlebank.Catalog())
+	})
 	mux.HandleFunc("POST /api/validate", func(w http.ResponseWriter, r *http.Request) {
 		request, ok := readPuzzle(w, r)
 		if !ok {
@@ -45,6 +49,16 @@ func NewHandler(random func() (RandomPuzzle, error)) http.Handler {
 		writeJSON(w, http.StatusOK, response)
 	})
 	mux.HandleFunc("GET /api/puzzles/random", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		if query.Get("source") == "practice" || query.Get("difficulty") != "" || query.Get("technique") != "" {
+			puzzle, err := puzzlebank.Select(puzzlebank.Selection{Difficulty: query.Get("difficulty"), Technique: query.Get("technique"), Exclude: query.Get("exclude")})
+			if err != nil {
+				writeError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			writeJSON(w, http.StatusOK, puzzle)
+			return
+		}
 		if random == nil {
 			writeError(w, http.StatusServiceUnavailable, "random puzzle database is unavailable")
 			return

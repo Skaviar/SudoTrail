@@ -17,7 +17,14 @@ window.godokuSession = (() => {
           typeof saved.transcribing !== 'boolean') return null;
       lastSaved = text;
       const reviewing = saved.reviewing === true;
+      const practice = {};
+      if (['easy', 'medium', 'hard', 'expert'].includes(saved.selectedDifficulty)) practice.selectedDifficulty = saved.selectedDifficulty;
+      for (const field of ['selectedTechnique', 'practiceFocus', 'lastPuzzleID']) {
+        if (typeof saved[field] === 'string' && saved[field].length <= 100) practice[field] = saved[field];
+      }
+      if (typeof saved.challengePending === 'boolean') practice.challengePending = reviewing && saved.challengePending;
       return {
+        ...practice,
         original: saved.original, givenClues: saved.givenClues,
         transcribing: saved.transcribing && !reviewing,
         puzzleLabel: typeof saved.puzzleLabel === 'string' ? saved.puzzleLabel : '',

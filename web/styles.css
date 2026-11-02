@@ -15,8 +15,9 @@
 body { margin: 0; }
 button, input { font: inherit; }
 button { cursor: pointer; }
+select { font: inherit; }
 button:disabled { cursor: default; opacity: .4; }
-button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 2px solid #8aa568;
   outline-offset: 2px;
 }
@@ -38,6 +39,33 @@ main { max-width: 1040px; margin: 0 auto; padding: 12px 16px; }
 .reviewing-steps .board-title { display: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 h2 { margin: 0; }
+
+/* Setup is a separate screen; only the active puzzle's controls stay on board. */
+.puzzle-chooser { max-width: 660px; margin: 28px auto; padding: 28px; background: white; border: 1px solid var(--line); border-radius: 12px; }
+.puzzle-chooser h1 { margin: 0 0 8px; font-size: clamp(22px,3vw,29px); font-weight: 600; letter-spacing: -.6px; }
+.chooser-intro { margin: 0 0 24px; color: #64766a; font-size: 13px; line-height: 1.5; }
+.level-choices { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; border: 0; padding: 0; margin: 0; }
+.level-card { position: relative; cursor: pointer; border: 1px solid var(--line); border-radius: 7px; padding: 14px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.level-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.level-card:has(input:checked) { border-color: var(--green); background: #edf4ec; box-shadow: inset 0 0 0 1px var(--green); }
+.level-card:has(input:focus-visible) { outline: 2px solid #8aa568; outline-offset: 3px; }
+.level-card strong { font-size: 15px; font-weight: 650; }
+.level-card span { font-size: 11px; color: #64766a; }
+.level-description { font-size: 13px; line-height: 1.55; min-height: 40px; margin: 14px 0 20px; color: #53685a; }
+.technique-choice { display: block; margin: 0 0 7px; font-size: 12px; font-weight: 600; }
+.technique-choice span { margin-left: 5px; font-weight: 400; color: var(--muted); }
+#technique-focus { width: 100%; min-width: 0; height: 40px; padding: 6px 10px; border: 1px solid #bcccbc; border-radius: 5px; background: white; color: var(--ink); font-size: 13px; }
+.focus-description { margin: 8px 0 20px; color: #64766a; font-size: 12px; line-height: 1.5; }
+.chooser-start { display: flex; align-items: center; gap: 14px; }
+.chooser-start .button { padding: 10px 16px; font-size: 13px; min-height: 40px; }
+.library-count { font-size: 11px; color: var(--muted); }
+.own-puzzle { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 18px; }
+.own-puzzle > span { margin-right: auto; font-size: 12px; color: var(--muted); }
+.own-puzzle .button { min-height: 36px; }
+.challenge-tip { color: #64766a; font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
+.practice-challenge :is(.step-legend,.navigation,#timeline) { display: none; }
+.practice-challenge .playback { grid-template-columns: auto auto auto; }
+.practice-challenge .playback .button { min-height: 36px; }
 
 /* One lightweight toolbar, with no stacked rows of controls. */
 .button { border: 1px solid transparent; border-radius: 5px; padding: 6px 10px; font-size: 12px; font-weight: 600; }
@@ -135,6 +163,17 @@ h2 { margin: 0; }
 
 /* Phone playback fits above the rail; detail scrolling never moves the controls. */
 @media(max-width:800px) {
+  .puzzle-chooser { margin: 8px auto; padding: 14px; }
+  .puzzle-chooser h1 { font-size: 22px; line-height: 1.2; }
+  .chooser-intro { margin-bottom: 12px; font-size: 12px; }
+  .level-choices { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .level-card { padding: 9px 10px; gap: 4px; }
+  .level-description { margin: 8px 0 12px; min-height: 0; font-size: 12px; line-height: 1.4; }
+  .focus-description { margin-bottom: 12px; }
+  .chooser-start { gap: 10px; }
+  .chooser-start .button { padding: 9px 12px; font-size: 12px; }
+  .own-puzzle { margin-top: 14px; padding-top: 12px; }
+  .own-puzzle > span { display: none; }
   header { padding: 0 12px; }
   .brand-mark { display: none; }
   main { padding: 8px; }
@@ -165,6 +204,7 @@ h2 { margin: 0; }
   .navigation { gap: 0; }
   #position { min-width: 44px; font-size: 11px; }
   .edit-button { padding: 6px 8px; }
+  .practice-challenge .playback { grid-template-columns: minmax(0,1fr) auto auto; }
   .cell input { font-size: clamp(18px,6vw,28px); }
   .candidate-grid { inset: 2px; font-size: clamp(7px,2.3vw,11px); }
 }
