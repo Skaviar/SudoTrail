@@ -70,6 +70,8 @@ h2 { margin: 0; }
 .own-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .own-actions .button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
 .own-actions svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+#import-photo { position: relative; }
+.beta-badge { position: absolute; top: -7px; right: 6px; padding: 1px 5px; border: 1px solid #638270; border-radius: 999px; background: var(--accent); color: #173b2d; font-size: 9px; font-weight: 500; line-height: 1.2; letter-spacing: .2px; }
 .custom-picker .primary { color: #173b2d; background: var(--accent); }
 .custom-picker .primary:hover { background: #dfeacc; }
 .custom-picker .secondary { color: #f1f7e7; background: transparent; border-color: #638270; }
