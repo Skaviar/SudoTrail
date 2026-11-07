@@ -73,6 +73,23 @@
 </div>
 <p id="board-hint" class="entry-hint">Type 1–9 for clues; 0, space or another character skips a blank.</p>
 <div class="board-stage"><div class="board-wrap"><div id="board" class="board" role="group" aria-label="Editable Sudoku board"></div><svg id="deduction-overlay" class="deduction-overlay" aria-hidden="true"></svg></div></div>
+<div id="cell-controls" class="cell-controls" hidden>
+<div id="number-pad" class="number-pad" role="group" aria-label="Number keypad" hidden>
+<button type="button" class="button secondary" data-digit="1" aria-label="Enter 1">1</button>
+<button type="button" class="button secondary" data-digit="2" aria-label="Enter 2">2</button>
+<button type="button" class="button secondary" data-digit="3" aria-label="Enter 3">3</button>
+<button type="button" class="button secondary" data-digit="4" aria-label="Enter 4">4</button>
+<button type="button" class="button secondary" data-digit="5" aria-label="Enter 5">5</button>
+<button type="button" class="button secondary" data-digit="6" aria-label="Enter 6">6</button>
+<button type="button" class="button secondary" data-digit="7" aria-label="Enter 7">7</button>
+<button type="button" class="button secondary" data-digit="8" aria-label="Enter 8">8</button>
+<button type="button" class="button secondary" data-digit="9" aria-label="Enter 9">9</button>
+</div>
+<div class="cell-actions" role="group" aria-label="Cell editing">
+<button id="clear-cell" type="button" class="button secondary" disabled>Clear cell</button>
+<button id="undo" type="button" class="button secondary" disabled>Undo</button>
+</div>
+</div>
 <p id="message" class="message" role="status" aria-live="polite"></p>
 <p id="save-status" class="message error" role="status" aria-live="polite" hidden></p>
 <ul id="issues" class="issues" aria-label="Validation issues" hidden></ul>
@@ -81,7 +98,7 @@
 <div class="reasoning-heading"><span id="step-count" class="step-count"></span><div class="legend step-legend" aria-label="Board colors"><span><i class="legend-clue"></i>Clue</span><span><i class="legend-new"></i>Added</span><span><i class="legend-source"></i>Evidence</span><span><i class="legend-unit"></i>Unit</span><span><i class="legend-removed"></i>Removed</span></div></div>
 <div id="empty-explanation" hidden></div>
 <div id="explanation" hidden><div class="technique-heading"><span id="technique" class="technique"></span><a id="technique-guide" class="technique-link" target="_blank" rel="noopener noreferrer" hidden>Learn technique <span aria-hidden="true">↗</span></a></div><h2 id="step-title"></h2><p id="challenge-tip" class="challenge-tip" hidden></p><details id="reasoning-details"><summary>Why this move?</summary><label id="proof-choice" hidden>Proof branch <select id="proof-branch" aria-label="Proof branch"></select></label><p id="visual-summary" class="visual-summary" hidden></p><ul id="details" class="details"></ul></details></div>
-<div class="playback"><button id="reveal-hint" class="button primary" hidden>Reveal hint</button><button id="all-steps" class="button secondary" hidden>View all steps</button><div class="navigation"><button id="first" class="nav-button" aria-label="First state" disabled>⇤</button><button id="previous" class="nav-button" aria-label="Previous step" disabled>←</button><span id="position">— / —</span><button id="next" class="nav-button" aria-label="Next step" disabled>→</button><button id="last" class="nav-button" aria-label="Last state" disabled>⇥</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Solving step" disabled><button id="edit" class="button secondary edit-button" aria-label="Edit original puzzle" hidden>Edit</button></div>
+<div class="playback"><button id="reveal-hint" class="button primary" hidden>Reveal hint</button><button id="all-steps" class="button secondary" hidden>View all steps</button><div class="navigation"><button id="first" class="nav-button" aria-label="First state" disabled>⇤</button><button id="previous" class="nav-button" aria-label="Previous step" disabled>←</button><span id="position">— / —</span><button id="next" class="nav-button" aria-label="Next step" disabled>→</button><button id="last" class="nav-button" aria-label="Last state" disabled>⇥</button></div><input id="timeline" type="range" min="0" max="0" value="0" aria-label="Solving step" disabled><button id="edit" class="button secondary edit-button" aria-label="Return to puzzle" hidden>Back to puzzle</button></div>
 </aside>
 </div>
 </main>

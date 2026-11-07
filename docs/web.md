@@ -12,7 +12,7 @@ go run ./cmd/web -addr 127.0.0.1:8080 -database sudoku-3m.csv
 Open `http://127.0.0.1:8080` in a browser. Start by choosing a difficulty and an
 optional technique, **Enter numbers**, or **Import a photo**. The interface supports:
 
-- Filling any cell in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual or photo puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random puzzles, editing after a solve, and solution playback do not auto-advance.
+- Filling empty cells in any order, with arrow keys to move and Delete/Backspace to clear. During initial manual or photo puzzle entry, entering a digit advances to the next empty cell in reading order, skipping filled cells and wrapping to earlier blanks. Other typed characters (including 0, space, and period) or Enter skip to the next empty cell without changing its value. Arrow keys and Tab retain normal navigation; Delete/Backspace clear a cell without advancing. Random puzzles, editing after a solve, and solution playback do not auto-advance.
 - Automatically checking the grid as numbers are entered or cleared, highlighting
   conflicting clues and empty cells with no possible digits. Checks run in the
   background; correcting a conflict clears its warning.
@@ -35,8 +35,13 @@ history is rebuilt from the saved submission when reopening playback. Clearing
 site data removes the save. If the browser blocks saving or cannot fit a photo,
 the interface reports it while keeping editing and solving available.
 Storage and practice helpers can also be checked with
-`node --test web/session_test.mjs web/training_test.mjs`
+`node --test web/*_test.mjs`
 when Node is available; Node is not required to build or run the app.
+
+On mobile and touch devices, select a cell and use the on-screen 1–9 keypad.
+**Clear cell** removes an entry; **Undo** restores edits made during the current
+visit (also Ctrl/Cmd+Z). Loaded clues are locked, including after returning from
+solution playback. Manually entered clues lock after a successful solve request.
 
 The HTML, CSS, and JavaScript in `web/` are embedded in the Go executable.
 Restart `go run ./cmd/web` after changing frontend files. No Node build or
@@ -164,10 +169,9 @@ to the Go API or an OCR service.
    them. Amber means uncertain or
    unreadable; red indicates duplicate clues. Edit or clear any cell, and check
    blanks for missed digits. Choose **Use this puzzle** when ready.
-4. The photo remains visible alongside the editable main board (above it on
-   phones). Both review and initial photo entry advance to the next blank when
-   you type a digit. The grid checks clues automatically; choosing **Solve step
-   by step** ends automatic advancing.
+4. The photo remains visible alongside the main board (above it on phones).
+   Reviewed clues are locked when you choose **Use this puzzle**; empty cells
+   remain editable. Correct recognized clues in the review grid before loading.
 
 Recognition targets clear, printed, upright 9×9 puzzles. Handwriting, tiny
 pencil marks, blur, strong shadows, cropped digits, and incorrect corner
@@ -182,6 +186,6 @@ if a phone-specific format cannot be decoded. Closing the dialog cancels an
 active recognition job without replacing the current puzzle.
 
 Playback uses a bottom navigation rail with previous/next, a timeline, and
-**Edit**. On phones, the board stays above the rail and detailed reasoning
+**Back to puzzle**. On phones, the board stays above the rail and detailed reasoning
 scrolls separately. **Why this move?** contains the elimination summary and
 proof details; color meanings appear beside the step count.

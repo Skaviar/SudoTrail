@@ -32,6 +32,31 @@ let challengePending = savedSession?.challengePending === true;
 let practiceTarget = -1;
 let lastPuzzleID = savedSession?.lastPuzzleID || '';
 let practiceCatalog = [];
+let selectedCell = -1;
+let editHistory = [];
+const keypadLayout = window.matchMedia('(max-width: 800px), (pointer: coarse)');
+function canEditCell(index) {
+  return index >= 0 && index < 81 && !busy && !solvePending && !states.length && !givenClues?.[index];
+}
+function editCell(index, value) {
+  if (!canEditCell(index)) return;
+  if (original[index] === value) { render(); return; }
+  editHistory.push({ index, value: original[index] });
+  original[index] = value;
+  showIssues([]); message(''); render(); scheduleValidation();
+}
+function undoEdit() {
+  if (busy || solvePending || states.length || !editHistory.length) return;
+  const edit = editHistory.pop();
+  // A newly loaded puzzle never inherits edits from the previous one.
+  if (givenClues?.[edit.index]) return;
+  original[edit.index] = edit.value;
+  selectedCell = edit.index;
+  showIssues([]); message(''); render(); scheduleValidation();
+  cells[selectedCell].input.focus();
+}
+function resetEdits() { editHistory = []; selectedCell = -1; }
+
 $('candidates').checked = savedSession?.candidates ?? true;
 $('visuals').checked = savedSession?.guides ?? true;
 if (referencePhoto) $('reference-image').src = referencePhoto;
@@ -74,7 +99,7 @@ for (let index = 0; index < 81; index++) {
   input.autocomplete = 'off';
   input.setAttribute('aria-label', `Row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`);
   input.addEventListener('input', event => {
-    if (busy || solvePending || states.length || input.readOnly) {
+    if (!canEditCell(index)) {
       render();
       return;
     }
@@ -88,18 +113,32 @@ for (let index = 0; index < 81; index++) {
       return;
     }
     const digits = input.value.replace(/[^1-9]/g, '');
-    original[index] = digits ? Number(digits.at(-1)) : 0;
-    conflicts.clear();
-    $('issues').hidden = true;
-    message('');
-    render();
-    scheduleValidation();
+    editCell(index, digits ? Number(digits.at(-1)) : 0);
     if (transcribing && digits && enteredDigit && wasFocused) focusNextEmptyCell(index);
   });
   input.addEventListener('keydown', event => {
-    handleGridKey(event, index, cells, original, transcribing && !busy && !solvePending && !states.length);
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
+      event.preventDefault(); undoEdit(); return;
+    }
+    // Read-only mobile inputs suppress the OS keyboard; physical keys still work.
+    if (keypadLayout.matches && canEditCell(index) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (/^[1-9]$/.test(event.key)) {
+        event.preventDefault(); editCell(index, Number(event.key));
+        if (transcribing) focusNextEmptyCell(index);
+        return;
+      }
+      if (['Backspace', 'Delete', '0'].includes(event.key)) {
+        event.preventDefault(); editCell(index, 0); return;
+      }
+    }
+    handleGridKey(event, index, cells, original, transcribing && canEditCell(index));
   });
-  input.addEventListener('focus', () => input.select());
+  input.addEventListener('focus', () => {
+    selectedCell = index;
+    cells.forEach((entry, i) => entry.cell.classList.toggle('selected', i === index));
+    updateControls();
+    if (!input.readOnly) input.select();
+  });
   input.addEventListener('compositionstart', cancelValidation);
   const marks = document.createElement('div');
   marks.className = 'candidate-grid';
@@ -171,7 +210,16 @@ function updateControls() {
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
   $('solve').textContent = busy ? 'Working…' : 'Solve step by step';
-  for (const { input } of cells) input.readOnly = busy || states.length > 0;
+  cells.forEach(({ input }, index) => {
+    input.readOnly = !canEditCell(index) || keypadLayout.matches;
+    input.inputMode = keypadLayout.matches ? 'none' : 'numeric';
+    input.setAttribute('aria-readonly', String(!canEditCell(index)));
+  });
+  $('cell-controls').hidden = !entryMode || states.length > 0;
+  $('number-pad').hidden = !keypadLayout.matches;
+  for (const button of $('number-pad').querySelectorAll('button')) button.disabled = !canEditCell(selectedCell);
+  $('clear-cell').disabled = !canEditCell(selectedCell) || !original[selectedCell];
+  $('undo').disabled = busy || solvePending || states.length > 0 || !editHistory.length;
   board.setAttribute('aria-busy', String(busy));
 }
 function render() {
@@ -201,7 +249,7 @@ function render() {
     input.value = value || '';
     input.setAttribute('aria-invalid', String(conflicts.has(index)));
     const placed = step?.number > 0 && step.row === row && step.col === col;
-    cell.className = ['cell', value && (givenClues ? givenClues[index] === value : original[index] === value) ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
+    cell.className = ['cell', index === selectedCell ? 'selected' : '', value && (givenClues ? givenClues[index] === value : original[index] === value) ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
     marks.replaceChildren();
     if (state && !value && $('candidates').checked) {
       for (let digit = 1; digit <= 9; digit++) {
@@ -218,8 +266,12 @@ function render() {
   $('explanation').hidden = !state;
   $('edit').hidden = !state;
   $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Enter a puzzle';
-  $('board-hint').hidden = !!state || !transcribing;
-  $('board-hint').textContent = 'Type 1–9 for clues; 0, space or another character skips a blank.';
+  $('board-hint').hidden = !!state;
+  $('board-hint').textContent = keypadLayout.matches
+    ? givenClues === null ? 'Select a cell, then tap a number to enter your puzzle.'
+      : 'Select a cell, then tap a number. Original clues are locked.'
+    : transcribing ? 'Type 1–9 for clues; 0, space or another character skips a blank.'
+    : 'Fill the empty cells. Original clues are locked.';
   $('step-count').textContent = state ? `${states.length - 1} steps` : '';
   if (state && practiceFocus) $('step-count').textContent = `${practiceFocus} practice`;
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
@@ -326,7 +378,7 @@ function scheduleValidation() {
 $('solve').addEventListener('click', () => perform(async () => {
   transcribing = false;
   const result = await api('/api/solve', puzzleString());
-  if (givenClues === null) givenClues = [...original];
+  if (givenClues === null) { givenClues = [...original]; resetEdits(); }
   showIssues([]); states = result.states; current = 0;
   setUpChallenge();
   message(result.solved ? '' : 'Stopped: no more supported moves.');
@@ -334,6 +386,7 @@ $('solve').addEventListener('click', () => perform(async () => {
 $('random').addEventListener('click', () => perform(async () => {
   const query = new URLSearchParams({ source: 'practice', difficulty: selectedDifficulty, technique: selectedTechnique, exclude: lastPuzzleID });
   const result = await api(`/api/puzzles/random?${query}`);
+  resetEdits();
   original = [...result.puzzle].map(ch => /[1-9]/.test(ch) ? Number(ch) : 0);
   givenClues = [...original];
   transcribing = false; referencePhoto = ''; $('reference-image').removeAttribute('src');
@@ -350,6 +403,7 @@ $('random').addEventListener('click', () => perform(async () => {
 }));
 $('clear').addEventListener('click', () => {
   cancelValidation();
+  resetEdits();
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
   entryMode = false; practiceFocus = ''; challengePending = false; practiceTarget = -1;
   transcribing = true; referencePhoto = ''; $('reference-image').removeAttribute('src');
@@ -368,6 +422,16 @@ $('timeline').addEventListener('input', event => navigate(Number(event.target.va
 $('candidates').addEventListener('change', render);
 $('visuals').addEventListener('change', render);
 $('proof-branch').addEventListener('change', event => { selectedProof = Number(event.target.value); render(); });
+$('clear-cell').addEventListener('click', () => editCell(selectedCell, 0));
+$('undo').addEventListener('click', undoEdit);
+for (const button of $('number-pad').querySelectorAll('button')) {
+  button.addEventListener('click', () => {
+    const index = selectedCell;
+    editCell(index, Number(button.dataset.digit));
+    if (transcribing && canEditCell(index)) focusNextEmptyCell(index);
+  });
+}
+keypadLayout.addEventListener('change', render);
 new ResizeObserver(() => renderVisuals(states[current], states[current]?.step)).observe(board);
 render();
 
@@ -604,12 +668,13 @@ function renderVisuals(state, step) {
   $('visual-summary').hidden = !text.length;
 }
 
-// Photo import supplies reviewed clues; correction and solving use the normal board.
+// Photo review finalizes the locked clues before loading the main board.
 document.addEventListener('godoku:photo-import', event => {
   if (busy) return;
+  resetEdits();
   original = [...event.detail.values];
   givenClues = [...original];
-  transcribing = true; referencePhoto = event.detail.image || '';
+  transcribing = false; referencePhoto = event.detail.image || '';
   if (referencePhoto) $('reference-image').src = referencePhoto;
   else $('reference-image').removeAttribute('src');
   states = []; current = 0; puzzleLabel = 'Puzzle from your photo';

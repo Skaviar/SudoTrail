@@ -109,7 +109,7 @@ h2 { margin: 0; }
 .cell:nth-child(n+73) { border-bottom: 0; }
 .cell input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; text-align: center; font-size: clamp(20px,2.7vw,29px); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--green); outline: none; }
 .cell.clue input { color: var(--ink); }
-.cell:focus-within { background: #edf3df; box-shadow: inset 0 0 0 2px #709658; z-index: 1; }
+.cell.selected, .cell:focus-within { background: #edf3df; box-shadow: inset 0 0 0 2px #709658; z-index: 1; }
 .cell.conflict { background: #fff0ed; box-shadow: inset 0 0 0 2px #d17a6b; }
 .cell.focus-unit { background: #f1f5e9; }
 .cell.source-cell { background: #deece9; box-shadow: inset 0 0 0 2px #6c9d91; }
@@ -270,4 +270,14 @@ h2 { margin: 0; }
   #photo-review .photo-help { font-size: 11px; }
   .photo-review-grid { max-width: min(100%,39dvh); }
   .photo-actions { margin-top: 12px; }
+}
+
+/* Keep entry controls within the board width and comfortable to tap. */
+.cell-controls { margin-top: 12px; }
+.number-pad { display: grid; grid-template-columns: repeat(9,minmax(0,1fr)); gap: 4px; }
+.number-pad .button { padding: 0; min-height: 44px; font-size: 20px; touch-action: manipulation; }
+.cell-actions { display: flex; gap: 8px; margin-top: 8px; }
+.cell-actions .button { min-height: 44px; flex: 1; touch-action: manipulation; }
+@media(max-width:360px) {
+  .number-pad { grid-template-columns: repeat(5,minmax(0,1fr)); }
 }
