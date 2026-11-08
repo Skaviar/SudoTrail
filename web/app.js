@@ -243,11 +243,14 @@ function updateControls() {
   $('hint').disabled = $('solve').disabled;
   $('hint').textContent = 'Hint';
   $('hint-card').hidden = !activeHint || states.length > 0;
+  $('hint').setAttribute('aria-expanded', String(!$('hint-card').hidden));
   $('dismiss-hint').disabled = busy;
   if (activeHint) {
     $('hint-title').textContent = `Hint · ${activeHint.technique}`;
     $('hint-text').textContent = activeHint.guidance;
   }
+  if (!$('hint-card').hidden && !$('hint-card').open) $('hint-card').showModal();
+  else if ($('hint-card').hidden && $('hint-card').open) $('hint-card').close();
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
@@ -434,9 +437,20 @@ async function requestHint() {
     highlightedCell = selectedCell;
   }
   message('');
+
 }
 $('hint').addEventListener('click', () => perform(requestHint));
 $('dismiss-hint').addEventListener('click', () => { activeHint = null; render(); });
+$('hint-card').addEventListener('close', () => {
+  if (activeHint && !$('hint-card').open) { activeHint = null; render(); }
+});
+$('hint-card').addEventListener('click', event => {
+  if (event.target !== $('hint-card')) return;
+  const bounds = $('hint-card').getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+    activeHint = null; render();
+  }
+});
 $('solve').addEventListener('click', () => perform(async () => {
   transcribing = false;
   const result = await api('/api/solve', puzzleString());

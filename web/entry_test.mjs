@@ -15,6 +15,9 @@ function setup(mobile = false) {
       querySelectorAll() { return this.children; },
       focus() { document.activeElement = this; this.listeners.focus?.(); },
       blur() { if (document.activeElement === this) document.activeElement = null; },
+      showModal() { this.open = true; },
+      close() { this.open = false; },
+      scrollIntoView(options) { this.lastScroll = options; },
       select() {}, selectedOptions: [{}]
     };
   }
@@ -26,7 +29,9 @@ function setup(mobile = false) {
     querySelectorAll() { return []; }
   };
   const context = vm.createContext({
-    document, window: {
+    document, animationFrames: [],
+    requestAnimationFrame: callback => context.animationFrames.push(callback),
+    window: {
       godokuSession: { load: () => null }, godokuTraining: {},
       matchMedia: () => ({ matches: mobile }), addEventListener() {}
     }, setTimeout() {}, clearTimeout() {}
@@ -99,7 +104,11 @@ test('a hint guides without filling any cell and keeps the board editable', asyn
       return {status: 'hint', focus: {row: 0, col: 1}, technique: 'Hidden Single', guidance: 'Check where each missing digit can fit.'};
     }`);
   await run('requestHint();');
-  run('updateControls();');
+  run('updateControls(); animationFrames.splice(0).forEach(callback => callback());');
+  assert.equal(run(`$('hint-card').hidden`), false);
+  assert.equal(run(`$('hint-card').open`), true);
+  assert.equal(run(`$('hint-card').lastScroll`), undefined);
+  assert.equal(run('animationFrames.length'), 0);
   assert.equal(run('original.filter(Boolean).length'), 1);
   assert.equal(run('states.length'), 0);
   assert.equal(run('canEditCell(1)'), true);
@@ -174,4 +183,14 @@ test('tapping a cell selects it even when the browser does not focus buttons', (
   assert.equal(run('highlightedCell'), 1);
   run('editCell(1, 4);');
   assert.equal(run('highlightedCell'), -1);
+});
+
+
+test('hint opens as a dialog and closes without scrolling', () => {
+  const run = setup(true);
+  run(`activeHint = {technique: 'Single', guidance: 'Check this cell.'}; updateControls();`);
+  assert.equal(run(`$('hint-card').open`), true);
+  run('activeHint = null; updateControls();');
+  assert.equal(run(`$('hint-card').open`), false);
+  assert.equal(run(`$('hint-card').lastScroll`), undefined);
 });

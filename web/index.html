@@ -68,7 +68,7 @@
 <label id="guides-option" hidden><input id="visuals" type="checkbox" checked> Guides</label>
 <label id="candidates-option" hidden><input id="candidates" type="checkbox" checked> Candidates</label>
 <div class="toolbar-actions" role="group" aria-label="Puzzle actions">
-<button id="hint" class="button hint-button" title="Get guidance without revealing the answer">Hint</button>
+<button id="hint" class="button hint-button" aria-controls="hint-card" aria-haspopup="dialog" aria-expanded="false" title="Get guidance without revealing the answer">Hint</button>
 <button id="solve" class="button primary" title="View the step-by-step solution">Solve step by step</button>
 </div>
 </div>
@@ -91,10 +91,7 @@
 <button id="undo" type="button" class="button secondary" disabled>Undo</button>
 </div>
 </div>
-<section id="hint-card" class="hint-card" aria-labelledby="hint-title" aria-live="polite" hidden>
-<h3 id="hint-title"></h3><p id="hint-text"></p>
-<div class="cell-actions"><button id="dismiss-hint" class="button secondary">Dismiss</button></div>
-</section>
+
 <p id="message" class="message" role="status" aria-live="polite"></p>
 <p id="save-status" class="message error" role="status" aria-live="polite" hidden></p>
 <ul id="issues" class="issues" aria-label="Validation issues" hidden></ul>
@@ -107,6 +104,10 @@
 </aside>
 </div>
 </main>
+<dialog id="hint-card" class="hint-card" aria-labelledby="hint-title" aria-describedby="hint-text">
+<div class="hint-heading"><h3 id="hint-title"></h3><button id="dismiss-hint" class="button quiet" aria-label="Dismiss hint" autofocus>Dismiss</button></div>
+<p id="hint-text"></p>
+</dialog>
 <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
 <div class="photo-heading"><div><h2 id="photo-title">Import a Sudoku photo</h2></div><button id="photo-close" class="nav-button" aria-label="Close photo import">×</button></div>
 <p class="photo-description">Choose a clear photo of a printed puzzle. Your image stays in this browser.</p>
