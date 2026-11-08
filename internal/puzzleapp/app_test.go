@@ -43,3 +43,26 @@ func TestSharedSolverContract(t *testing.T) {
 		t.Fatal("stuck status incorrect")
 	}
 }
+
+func TestHintGuidesWithoutRevealingAnswer(t *testing.T) {
+	puzzle := "530070000600195000098000060800060003400803001700020006060000280000419005000080079"
+	hint, err := Hint(puzzle)
+	if err != nil || hint.Status != "hint" || hint.Focus == nil || hint.Guidance == "" || hint.Technique == "" {
+		t.Fatalf("expected guidance: %+v, %v", hint, err)
+	}
+	if puzzle[hint.Focus.Row*9+hint.Focus.Col] != '0' {
+		t.Fatal("hint focused on a given")
+	}
+	for _, tc := range []struct{ puzzle, status string }{
+		{strings.Repeat(".", 81), "stuck"},
+		{"534678912672195348198342567859761423426853791713924856961537284287419635345286179", "solved"},
+	} {
+		hint, err := Hint(tc.puzzle)
+		if err != nil || hint.Status != tc.status || hint.Guidance != "" {
+			t.Fatalf("unexpected terminal hint: %+v, %v", hint, err)
+		}
+	}
+	if _, err := Hint("11" + strings.Repeat(".", 79)); err == nil {
+		t.Fatal("invalid puzzle accepted")
+	}
+}

@@ -1,7 +1,10 @@
 // Package puzzleapp is the shared API/browser contract for the Go solver.
 package puzzleapp
 
-import "github.com/s-threepio/godoku/solver"
+import (
+	"fmt"
+	"github.com/s-threepio/godoku/solver"
+)
 
 type ValidationResponse struct {
 	Valid  bool                     `json:"valid"`
@@ -41,6 +44,44 @@ func Solve(puzzle string) (SolveResponse, error) {
 			state.Step = &step
 		}
 		result.States = append(result.States, state)
+	}
+	return result, nil
+}
+
+// HintResponse contains guidance only; solution digits and deductions stay private.
+type HintResponse struct {
+	Focus     *solver.Cell `json:"focus,omitempty"`
+	Technique string       `json:"technique,omitempty"`
+	Guidance  string       `json:"guidance,omitempty"`
+	Status    string       `json:"status"`
+}
+
+func Hint(puzzle string) (HintResponse, error) {
+	s, err := solver.NewSudoku(solver.Puzzle{Puzzle: puzzle})
+	if err != nil {
+		return HintResponse{}, err
+	}
+	if s.IsSolved() {
+		return HintResponse{Status: "solved"}, nil
+	}
+	step, ok := s.SolvePracticeStep()
+	if !ok {
+		return HintResponse{Status: "stuck"}, nil
+	}
+	result := HintResponse{Status: "hint", Technique: step.Technique}
+	if step.Number > 0 {
+		result.Focus = &solver.Cell{Row: step.Row, Col: step.Col}
+		location := fmt.Sprintf("row %d, column %d", step.Row+1, step.Col+1)
+		switch step.Technique {
+		case "Full House":
+			result.Guidance = "Look at " + location + ". Check its row, column and box for a unit with one empty cell, then work out which digit is missing."
+		case "Hidden Single":
+			result.Guidance = "Look around " + location + ". Check each missing digit in its row, column and box. Can any digit fit in only one cell?"
+		default:
+			result.Guidance = "Focus on " + location + ". Rule out digits already present in its row, column and box. What possibilities remain?"
+		}
+	} else {
+		result.Guidance = "Look for a " + step.Technique + " pattern. Compare candidate positions across rows, columns and boxes to find what can be ruled out."
 	}
 	return result, nil
 }

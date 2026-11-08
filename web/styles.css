@@ -281,3 +281,16 @@ h2 { margin: 0; }
 @media(max-width:360px) {
   .number-pad { grid-template-columns: repeat(5,minmax(0,1fr)); }
 }
+
+/* Repeated puzzle taps should act immediately without double-tap zoom. */
+.workspace, .photo-review-grid, button { touch-action: manipulation; }
+.hint-card { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #f1f5e9; }
+.hint-card h3 { margin: 0; font-size: 14px; }
+.hint-card p { margin: 8px 0; font-size: 14px; line-height: 1.5; }
+@media(max-width:800px) {
+  select { font-size: 16px; }
+  .reviewing-steps #hint { display: none; }
+}
+
+.hint-button { background: #f5d76e; border-color: #d6b74c; color: #493c12; }
+.hint-button:hover { background: #edca50; }

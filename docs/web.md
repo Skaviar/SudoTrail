@@ -38,9 +38,15 @@ Storage and practice helpers can also be checked with
 `node --test web/*_test.mjs`
 when Node is available; Node is not required to build or run the app.
 
+Choose the yellow **Hint** button for a technique and a nudge about where to
+look, without revealing the answer or filling a cell. The board stays editable.
+Hints use the current entries; editing or undoing dismisses the hint.
+**Solve step by step** still opens the full solution playback.
+
 On mobile and touch devices, select a cell and use the on-screen 1–9 keypad.
 **Clear cell** removes an entry; **Undo** restores edits made during the current
-visit (also Ctrl/Cmd+Z). Loaded clues are locked, including after returning from
+visit (also Ctrl/Cmd+Z). Repeated taps do not trigger double-tap zoom in the
+workspace; pinch-to-zoom remains available. Loaded clues are locked, including after returning from
 solution playback. Manually entered clues lock after a successful solve request.
 
 The HTML, CSS, and JavaScript in `web/` are embedded in the Go executable.
@@ -70,6 +76,15 @@ cells with no candidates are reported. A conflict-free board returns
 `{"valid":true,"issues":[]}`. This means **no local conflicts found**, not proof
 of solvability or a unique solution. An empty board passes these checks.
 Validation results use HTTP 200; malformed JSON uses HTTP 400.
+
+### Request one hint
+
+`POST /api/hint` accepts the same puzzle body as validation. It returns
+`status: "hint"`, a `technique`, `guidance`, and an optional `focus` cell.
+Only the next deduction is inspected. The response contains no answer digit,
+solution step, candidate data or solution history. Completed or unsupported
+positions return status `solved` or `stuck`. Invalid puzzles return HTTP 400
+with validation issues. Native API and browser WASM modes share this behavior.
 
 ### Solve a puzzle
 

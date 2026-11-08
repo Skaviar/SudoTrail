@@ -35,14 +35,20 @@ func request(_ js.Value, args []js.Value) (result any) {
 	switch parsed.Path {
 	case "/api/validate":
 		reply.Body = puzzleapp.Validate(puzzle)
-	case "/api/solve":
+	case "/api/solve", "/api/hint":
 		validation := puzzleapp.Validate(puzzle)
 		if !validation.Valid {
 			reply.Status = 400
 			reply.Body = validation
 			break
 		}
-		solved, err := puzzleapp.Solve(puzzle)
+		var solved any
+		var err error
+		if parsed.Path == "/api/hint" {
+			solved, err = puzzleapp.Hint(puzzle)
+		} else {
+			solved, err = puzzleapp.Solve(puzzle)
+		}
 		if err != nil {
 			reply.Status = 400
 			reply.Body = map[string]string{"error": err.Error()}

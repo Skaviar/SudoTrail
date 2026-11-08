@@ -29,7 +29,9 @@ function setup(mobile = false) {
   });
   // Run the real entry handlers and control logic without playback or API calls.
   vm.runInContext(source.slice(0, source.indexOf('// Manual entry and photo review')) +
-    source.slice(source.indexOf('function updateControls()'), source.indexOf('function render()')) + `
+    source.slice(source.indexOf('function updateControls()'), source.indexOf('function render()')) +
+    source.slice(source.indexOf('function puzzleString()'), source.indexOf('function renderTechniqueLink')) +
+    source.slice(source.indexOf('async function requestHint()'), source.indexOf("$('hint').addEventListener")) + `
     function showIssues() {}
     function message() {}
     function scheduleValidation() {}
@@ -81,4 +83,37 @@ test('playback and pending solver work block all edits and undo', () => {
   assert.equal(run('original[0]'), 4);
   run('states = []; solvePending = true; editCell(0, 9); undoEdit();');
   assert.equal(run('original[0]'), 4);
+});
+
+
+test('a hint guides without filling any cell and keeps the board editable', async () => {
+  const run = setup(true);
+  run(`givenClues = Array(81).fill(0); givenClues[0] = 5; original = [...givenClues];
+    async function api(path) {
+      if (path !== '/api/hint') throw Error('unexpected endpoint');
+      return {status: 'hint', focus: {row: 0, col: 1}, technique: 'Hidden Single', guidance: 'Check where each missing digit can fit.'};
+    }`);
+  await run('requestHint();');
+  run('updateControls();');
+  assert.equal(run('original.filter(Boolean).length'), 1);
+  assert.equal(run('states.length'), 0);
+  assert.equal(run('canEditCell(1)'), true);
+  assert.equal(run('selectedCell'), 1);
+  assert.equal(run('editHistory.length'), 0);
+  assert.equal(run(`$('hint-text').textContent`), 'Check where each missing digit can fit.');
+  assert.equal(run(`$('hint').textContent`), 'Hint');
+  assert.equal(run('typeof applyHint'), 'undefined');
+});
+
+test('editing invalidates guidance and terminal hints do not change the board', async () => {
+  const run = setup();
+  run(`async function api() { return {status: 'hint', technique: 'Naked Pair', guidance: 'Compare candidates.'}; }`);
+  await run('requestHint()');
+  assert.equal(run('selectedCell'), -1);
+  run('editCell(2, 4);');
+  assert.equal(run('activeHint'), null);
+  run(`api = async () => ({status: 'solved'});`);
+  await run('requestHint()');
+  assert.equal(run('activeHint'), null);
+  assert.equal(run('original[2]'), 4);
 });

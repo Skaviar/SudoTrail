@@ -48,6 +48,22 @@ func NewHandler(random func() (RandomPuzzle, error)) http.Handler {
 		}
 		writeJSON(w, http.StatusOK, response)
 	})
+	mux.HandleFunc("POST /api/hint", func(w http.ResponseWriter, r *http.Request) {
+		request, ok := readPuzzle(w, r)
+		if !ok {
+			return
+		}
+		if issues := solver.ValidatePuzzle(request.Puzzle); len(issues) > 0 {
+			writeJSON(w, http.StatusBadRequest, validationResponse{Valid: false, Issues: issues})
+			return
+		}
+		response, err := puzzleapp.Hint(request.Puzzle)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
+	})
 	mux.HandleFunc("GET /api/puzzles/random", func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		if query.Get("source") == "practice" || query.Get("difficulty") != "" || query.Get("technique") != "" {

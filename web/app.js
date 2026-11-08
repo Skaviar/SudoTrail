@@ -34,6 +34,7 @@ let lastPuzzleID = savedSession?.lastPuzzleID || '';
 let practiceCatalog = [];
 let selectedCell = -1;
 let editHistory = [];
+let activeHint = null;
 const keypadLayout = window.matchMedia('(max-width: 800px), (pointer: coarse)');
 function canEditCell(index) {
   return index >= 0 && index < 81 && !busy && !solvePending && !states.length && !givenClues?.[index];
@@ -43,6 +44,7 @@ function editCell(index, value) {
   if (original[index] === value) { render(); return; }
   editHistory.push({ index, value: original[index] });
   original[index] = value;
+  activeHint = null;
   showIssues([]); message(''); render(); scheduleValidation();
 }
 function undoEdit() {
@@ -51,11 +53,12 @@ function undoEdit() {
   // A newly loaded puzzle never inherits edits from the previous one.
   if (givenClues?.[edit.index]) return;
   original[edit.index] = edit.value;
+  activeHint = null;
   selectedCell = edit.index;
   showIssues([]); message(''); render(); scheduleValidation();
   cells[selectedCell].input.focus();
 }
-function resetEdits() { editHistory = []; selectedCell = -1; }
+function resetEdits() { editHistory = []; selectedCell = -1; activeHint = null; }
 
 $('candidates').checked = savedSession?.candidates ?? true;
 $('visuals').checked = savedSession?.guides ?? true;
@@ -201,11 +204,20 @@ function renderTechniqueLink(id, technique) {
 }
 function updateControls() {
   $('solve').hidden = solvePending || states.length > 0;
+  $('hint').hidden = states.length > 0;
   for (const id of ['random', 'solve', 'clear', 'edit', 'import-photo', 'enter-puzzle', 'reveal-hint', 'all-steps']) $(id).disabled = busy;
   $('random').disabled = busy || !practiceCatalog.length || !$('technique-focus').selectedOptions[0] || $('technique-focus').selectedOptions[0].disabled;
   $('technique-focus').disabled = busy || !practiceCatalog.length;
   for (const radio of document.querySelectorAll('[name="difficulty"]')) radio.disabled = busy;
   $('solve').disabled = busy || states.length > 0 || !original.some(Boolean) || conflicts.size > 0;
+  $('hint').disabled = $('solve').disabled;
+  $('hint').textContent = 'Hint';
+  $('hint-card').hidden = !activeHint || states.length > 0;
+  $('dismiss-hint').disabled = busy;
+  if (activeHint) {
+    $('hint-title').textContent = `Hint · ${activeHint.technique}`;
+    $('hint-text').textContent = activeHint.guidance;
+  }
   $('first').disabled = $('previous').disabled = busy || current === 0 || !states.length;
   $('last').disabled = $('next').disabled = busy || !states.length || current === states.length - 1;
   $('timeline').disabled = busy || states.length < 2;
@@ -375,10 +387,27 @@ function scheduleValidation() {
     }
   }, 150);
 }
+async function requestHint() {
+  const result = await api('/api/hint', puzzleString());
+  showIssues([]);
+  if (result.status !== 'hint') {
+    activeHint = null;
+    message(result.status === 'solved' ? 'Puzzle complete!' : 'No supported hint is available from this position. Check your entries or try another move.');
+    return;
+  }
+  if (givenClues === null) { givenClues = [...original]; resetEdits(); }
+  transcribing = false;
+  activeHint = result;
+  if (activeHint.focus) selectedCell = activeHint.focus.row * 9 + activeHint.focus.col;
+  message('');
+}
+$('hint').addEventListener('click', () => perform(requestHint));
+$('dismiss-hint').addEventListener('click', () => { activeHint = null; render(); });
 $('solve').addEventListener('click', () => perform(async () => {
   transcribing = false;
   const result = await api('/api/solve', puzzleString());
   if (givenClues === null) { givenClues = [...original]; resetEdits(); }
+  activeHint = null;
   showIssues([]); states = result.states; current = 0;
   setUpChallenge();
   message(result.solved ? '' : 'Stopped: no more supported moves.');
