@@ -33,6 +33,7 @@ let practiceTarget = -1;
 let lastPuzzleID = savedSession?.lastPuzzleID || '';
 let practiceCatalog = [];
 let selectedCell = -1;
+let highlightedCell = -1;
 let editHistory = [];
 let activeHint = null;
 const keypadLayout = window.matchMedia('(max-width: 800px), (pointer: coarse)');
@@ -41,6 +42,8 @@ function canEditCell(index) {
 }
 function editCell(index, value) {
   if (!canEditCell(index)) return;
+  activeHint = null;
+  if (value > 0) highlightedCell = -1;
   if (original[index] === value) { render(); return; }
   editHistory.push({ index, value: original[index] });
   original[index] = value;
@@ -55,10 +58,11 @@ function undoEdit() {
   original[edit.index] = edit.value;
   activeHint = null;
   selectedCell = edit.index;
+  highlightedCell = edit.index;
   showIssues([]); message(''); render(); scheduleValidation();
   cells[selectedCell].input.focus();
 }
-function resetEdits() { editHistory = []; selectedCell = -1; activeHint = null; }
+function resetEdits() { editHistory = []; selectedCell = -1; highlightedCell = -1; activeHint = null; }
 
 $('candidates').checked = savedSession?.candidates ?? true;
 $('visuals').checked = savedSession?.guides ?? true;
@@ -138,6 +142,7 @@ for (let index = 0; index < 81; index++) {
   });
   input.addEventListener('focus', () => {
     selectedCell = index;
+    highlightedCell = index;
     cells.forEach((entry, i) => entry.cell.classList.toggle('selected', i === index));
     updateControls();
     if (!input.readOnly) input.select();
@@ -261,7 +266,7 @@ function render() {
     input.value = value || '';
     input.setAttribute('aria-invalid', String(conflicts.has(index)));
     const placed = step?.number > 0 && step.row === row && step.col === col;
-    cell.className = ['cell', index === selectedCell ? 'selected' : '', value && (givenClues ? givenClues[index] === value : original[index] === value) ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
+    cell.className = ['cell', index === highlightedCell ? 'selected' : '', value && (givenClues ? givenClues[index] === value : original[index] === value) ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
     marks.replaceChildren();
     if (state && !value && $('candidates').checked) {
       for (let digit = 1; digit <= 9; digit++) {
@@ -398,7 +403,10 @@ async function requestHint() {
   if (givenClues === null) { givenClues = [...original]; resetEdits(); }
   transcribing = false;
   activeHint = result;
-  if (activeHint.focus) selectedCell = activeHint.focus.row * 9 + activeHint.focus.col;
+  if (activeHint.focus) {
+    selectedCell = activeHint.focus.row * 9 + activeHint.focus.col;
+    highlightedCell = selectedCell;
+  }
   message('');
 }
 $('hint').addEventListener('click', () => perform(requestHint));

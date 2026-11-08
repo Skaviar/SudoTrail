@@ -117,3 +117,18 @@ test('editing invalidates guidance and terminal hints do not change the board', 
   assert.equal(run('activeHint'), null);
   assert.equal(run('original[2]'), 4);
 });
+
+
+test('manual digits clear hint and cell highlights while retaining the keypad target', () => {
+  for (const mobile of [false, true]) {
+    const run = setup(mobile);
+    run('cells[1].input.focus(); activeHint = {focus: {row: 0, col: 1}};');
+    assert.equal(run('highlightedCell'), 1);
+    run('editCell(1, 4);');
+    assert.equal(run('highlightedCell'), -1);
+    assert.equal(run('activeHint'), null);
+    assert.equal(run('selectedCell'), 1);
+    run('cells[2].input.focus();');
+    assert.equal(run('highlightedCell'), 2);
+  }
+});
