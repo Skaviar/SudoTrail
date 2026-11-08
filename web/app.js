@@ -68,6 +68,19 @@ function undoEdit() {
 }
 function resetEdits() { editHistory = []; selectedCell = -1; highlightedCell = -1; activeHint = null; }
 
+// Keep selection while using the cell controls; other taps end cell entry.
+document.addEventListener('pointerdown', event => {
+  if (event.target.closest?.('#board .cell, #number-pad button, #clear-cell, #undo')) return;
+  if (selectedCell < 0 && highlightedCell < 0) return;
+  selectedCell = -1;
+  highlightedCell = -1;
+  for (const { cell, input } of cells) {
+    cell.classList.toggle('selected', false);
+    if (document.activeElement === input) input.blur();
+  }
+  updateControls();
+});
+
 $('candidates').checked = savedSession?.candidates ?? true;
 $('visuals').checked = savedSession?.guides ?? true;
 if (referencePhoto) $('reference-image').src = referencePhoto;

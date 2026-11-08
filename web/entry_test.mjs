@@ -20,7 +20,10 @@ function setup(mobile = false) {
   }
   const document = {
     getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
-    createElement: element, addEventListener() {}, querySelectorAll() { return []; }
+    listeners: {},
+    createElement: element,
+    addEventListener(name, callback) { this.listeners[name] = callback; },
+    querySelectorAll() { return []; }
   };
   const context = vm.createContext({
     document, window: {
@@ -138,4 +141,21 @@ test('manual digits reset highlights and keypad until a cell is selected again',
     run('cells[2].input.focus();');
     assert.equal(run('highlightedCell'), 2);
   }
+});
+
+
+test('outside taps clear selection and reset the keypad while cell controls preserve it', () => {
+  const run = setup(true);
+  run(`$('number-pad').children = Array.from({length: 9}, () => ({disabled: false})); cells[1].input.focus();`);
+  run(`document.listeners.pointerdown({target: {closest: () => ({})}});`);
+  assert.equal(run('selectedCell'), 1);
+  assert.equal(run('highlightedCell'), 1);
+  run(`document.listeners.pointerdown({target: {closest: () => null}});`);
+  assert.equal(run('selectedCell'), -1);
+  assert.equal(run('highlightedCell'), -1);
+  assert.equal(run('document.activeElement'), null);
+  assert.equal(run(`$('number-pad').children.every(button => button.disabled)`), true);
+  run('cells[2].input.focus();');
+  assert.equal(run('selectedCell'), 2);
+  assert.equal(run(`$('number-pad').children.some(button => button.disabled)`), false);
 });
