@@ -162,13 +162,16 @@ for (let index = 0; index < 81; index++) {
     }
     handleGridKey(event, index, cells, original, transcribing && canEditCell(index));
   });
-  input.addEventListener('focus', () => {
+  const selectCell = () => {
     selectedCell = index;
     highlightedCell = index;
     cells.forEach((entry, i) => entry.cell.classList.toggle('selected', i === index));
     updateControls();
     if (!input.readOnly) input.select();
-  });
+  };
+  input.addEventListener('focus', selectCell);
+  // Touch browsers may activate a button without moving keyboard focus.
+  input.addEventListener('click', selectCell);
   input.addEventListener('compositionstart', cancelValidation);
   const marks = document.createElement('div');
   marks.className = 'candidate-grid';

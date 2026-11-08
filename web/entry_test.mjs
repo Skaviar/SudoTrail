@@ -159,3 +159,19 @@ test('outside taps clear selection and reset the keypad while cell controls pres
   assert.equal(run('selectedCell'), 2);
   assert.equal(run(`$('number-pad').children.some(button => button.disabled)`), false);
 });
+
+
+test('tapping a cell selects it even when the browser does not focus buttons', () => {
+  const run = setup(true);
+  run(`$('number-pad').children = Array.from({length: 9}, () => ({disabled: false}));`);
+  run('cells[1].input.listeners.click();');
+  assert.equal(run('selectedCell'), 1);
+  assert.equal(run('highlightedCell'), 1);
+  assert.equal(run(`$('number-pad').children.some(button => button.disabled)`), false);
+  run(`document.listeners.pointerdown({target: {closest: () => null}});`);
+  assert.equal(run('highlightedCell'), -1);
+  run('cells[1].input.listeners.click();');
+  assert.equal(run('highlightedCell'), 1);
+  run('editCell(1, 4);');
+  assert.equal(run('highlightedCell'), -1);
+});
