@@ -69,6 +69,7 @@ test('undo restores replacements and cleared values in order and stops at the lo
 test('mobile selection suppresses the OS keyboard while allowing entry and physical keys', () => {
   const run = setup(true);
   run('updateControls(); cells[0].input.focus();');
+  assert.equal(run('cells[0].input.type'), 'button');
   assert.equal(run('cells[0].input.readOnly'), true);
   assert.equal(run('cells[0].input.inputMode'), 'none');
   assert.equal(run('selectedCell'), 0);

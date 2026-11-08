@@ -105,9 +105,14 @@ for (let index = 0; index < 81; index++) {
   const cell = document.createElement('div');
   cell.className = 'cell';
   const input = document.createElement('input');
-  input.type = 'text';
+  // Mobile cells select a keypad target, so they need no browser text services.
+  input.type = keypadLayout.matches ? 'button' : 'text';
   input.inputMode = 'numeric';
   input.autocomplete = 'off';
+  input.name = `sudoku-cell-${index}`;
+  input.spellcheck = false;
+  input.setAttribute('autocorrect', 'off');
+  input.setAttribute('autocapitalize', 'off');
   input.setAttribute('aria-label', `Row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`);
   input.addEventListener('input', event => {
     if (!canEditCell(index)) {
@@ -232,6 +237,7 @@ function updateControls() {
   $('timeline').disabled = busy || states.length < 2;
   $('solve').textContent = busy ? 'Working…' : 'Solve step by step';
   cells.forEach(({ input }, index) => {
+    input.type = keypadLayout.matches ? 'button' : 'text';
     input.readOnly = !canEditCell(index) || keypadLayout.matches;
     input.inputMode = keypadLayout.matches ? 'none' : 'numeric';
     input.setAttribute('aria-readonly', String(!canEditCell(index)));

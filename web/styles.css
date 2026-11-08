@@ -108,6 +108,7 @@ h2 { margin: 0; }
 .cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #829387; }
 .cell:nth-child(n+73) { border-bottom: 0; }
 .cell input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; text-align: center; font-size: clamp(20px,2.7vw,29px); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--green); outline: none; }
+.cell input[type="button"] { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .cell.clue input { color: var(--ink); }
 .cell.selected { background: #edf3df; box-shadow: inset 0 0 0 2px #709658; z-index: 1; }
 .cell.conflict { background: #fff0ed; box-shadow: inset 0 0 0 2px #d17a6b; }
