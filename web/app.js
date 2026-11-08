@@ -43,7 +43,11 @@ function canEditCell(index) {
 function editCell(index, value) {
   if (!canEditCell(index)) return;
   activeHint = null;
-  if (value > 0) highlightedCell = -1;
+  if (value > 0) {
+    highlightedCell = -1;
+    selectedCell = -1;
+    if (document.activeElement === cells[index].input) cells[index].input.blur();
+  }
   if (original[index] === value) { render(); return; }
   editHistory.push({ index, value: original[index] });
   original[index] = value;

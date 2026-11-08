@@ -277,13 +277,13 @@ h2 { margin: 0; }
 .number-pad { display: grid; grid-template-columns: repeat(9,minmax(0,1fr)); gap: 6px; }
 .number-pad .button {
   padding: 0; min-height: 48px; font-size: 22px; font-weight: 700;
-  color: #fff; background: #244c3d; border-color: #183a2d;
-  box-shadow: 0 2px 0 #183a2d; touch-action: manipulation;
+  color: #fff; background: #343942; border-color: #252930;
+  box-shadow: 0 2px 0 #252930; touch-action: manipulation;
 }
-.number-pad .button:hover:not(:disabled) { background: #183a2d; }
-.number-pad .button:active:not(:disabled) { background: #102c21; box-shadow: none; transform: translateY(2px); }
-.number-pad .button:focus-visible { outline: 3px solid #244c3d; outline-offset: 3px; }
-.number-pad .button:disabled { color: #626e66; background: #e5e9e5; border-color: #bac4bc; box-shadow: none; opacity: 1; }
+.number-pad .button:hover:not(:disabled) { background: #252930; }
+.number-pad .button:active:not(:disabled) { background: #181b20; box-shadow: none; transform: translateY(2px); }
+.number-pad .button:focus-visible { outline: 3px solid #343942; outline-offset: 3px; }
+.number-pad .button:disabled { color: #60656e; background: #e8eaed; border-color: #bbc0c8; box-shadow: none; opacity: 1; }
 .cell-actions { display: flex; gap: 8px; margin-top: 8px; }
 .cell-actions .button { min-height: 44px; flex: 1; touch-action: manipulation; }
 @media(max-width:360px) {

@@ -14,6 +14,7 @@ function setup(mobile = false) {
       addEventListener(name, callback) { this.listeners[name] = callback; },
       querySelectorAll() { return this.children; },
       focus() { document.activeElement = this; this.listeners.focus?.(); },
+      blur() { if (document.activeElement === this) document.activeElement = null; },
       select() {}, selectedOptions: [{}]
     };
   }
@@ -119,15 +120,20 @@ test('editing invalidates guidance and terminal hints do not change the board', 
 });
 
 
-test('manual digits clear hint and cell highlights while retaining the keypad target', () => {
+test('manual digits reset highlights and keypad until a cell is selected again', () => {
   for (const mobile of [false, true]) {
     const run = setup(mobile);
+    run(`$('number-pad').children = Array.from({length: 9}, () => ({disabled: false}));`);
     run('cells[1].input.focus(); activeHint = {focus: {row: 0, col: 1}};');
     assert.equal(run('highlightedCell'), 1);
     run('editCell(1, 4);');
     assert.equal(run('highlightedCell'), -1);
     assert.equal(run('activeHint'), null);
+    assert.equal(run('selectedCell'), -1);
+    assert.equal(run(`$('number-pad').children.every(button => button.disabled)`), true);
+    run('cells[1].input.focus();');
     assert.equal(run('selectedCell'), 1);
+    assert.equal(run(`$('number-pad').children.some(button => button.disabled)`), false);
     run('cells[2].input.focus();');
     assert.equal(run('highlightedCell'), 2);
   }
