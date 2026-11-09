@@ -105,8 +105,9 @@
 </div>
 </main>
 <dialog id="hint-card" class="hint-card" aria-labelledby="hint-title" aria-describedby="hint-text">
-<div class="hint-heading"><h3 id="hint-title"></h3><button id="dismiss-hint" class="button quiet" aria-label="Dismiss hint" autofocus>Dismiss</button></div>
-<p id="hint-text"></p>
+<div class="hint-heading"><h3 id="hint-title"></h3><button id="dismiss-hint" class="button quiet" aria-label="Dismiss hint">×</button></div>
+<p id="hint-text" aria-live="polite"></p>
+<div class="hint-footer"><span id="hint-position" aria-live="polite">1/2</span><button id="hint-page" class="button secondary" autofocus>Next →</button></div>
 </dialog>
 <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
 <div class="photo-heading"><div><h2 id="photo-title">Import a Sudoku photo</h2></div><button id="photo-close" class="nav-button" aria-label="Close photo import">×</button></div>

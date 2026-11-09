@@ -3,6 +3,8 @@ package puzzleapp
 import (
 	"strings"
 	"testing"
+
+	"github.com/s-threepio/godoku/solver"
 )
 
 func TestSharedSolverContract(t *testing.T) {
@@ -64,5 +66,30 @@ func TestHintGuidesWithoutRevealingAnswer(t *testing.T) {
 	}
 	if _, err := Hint("11" + strings.Repeat(".", 79)); err == nil {
 		t.Fatal("invalid puzzle accepted")
+	}
+}
+
+func TestHintStagesNameTheActualUnits(t *testing.T) {
+	for _, tc := range []struct {
+		technique, kind, want string
+		index, number         int
+	}{
+		{"Full House", "box", "box 5", 4, 7},
+		{"Hidden Single", "column", "column 9", 8, 3},
+		{"Naked Pair", "row", "row 2", 1, 0},
+	} {
+		step := solver.Step{Technique: tc.technique, Row: 4, Col: 5, Number: tc.number,
+			Visual: &solver.StepVisual{Units: []solver.VisualUnit{{Kind: tc.kind, Index: tc.index}}}}
+		hint := guidanceForStep(step)
+		if hint.Guidance == "" || !strings.Contains(hint.UnitGuidance, tc.want) {
+			t.Fatalf("missing unit guidance: %+v", hint)
+		}
+		if strings.Contains(hint.Guidance, tc.want) || strings.Contains(hint.UnitGuidance, "place ") {
+			t.Fatalf("hint revealed location too early or placed an answer: %+v", hint)
+		}
+	}
+	hint := guidanceForStep(solver.Step{Technique: "Naked Single", Row: 4, Col: 5, Number: 7})
+	if !strings.Contains(hint.UnitGuidance, "row 5, column 6 and box 5") {
+		t.Fatalf("missing cell's units: %+v", hint)
 	}
 }

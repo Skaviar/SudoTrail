@@ -161,11 +161,11 @@ func TestHintEndpoint(t *testing.T) {
 	puzzle := "530070000600195000098000060800060003400803001700020006060000280000419005000080079"
 	w := request(t, h, "POST", "/api/hint", `{"puzzle":"`+puzzle+`"}`)
 	var response map[string]json.RawMessage
-	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil || w.Code != 200 || string(response["status"]) != `"hint"` || len(response["guidance"]) == 0 {
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil || w.Code != 200 || string(response["status"]) != `"hint"` || len(response["guidance"]) == 0 || len(response["unitGuidance"]) == 0 {
 		t.Fatalf("unexpected hint: %s", w.Body.String())
 	}
 	for key := range response {
-		if key != "status" && key != "technique" && key != "guidance" && key != "focus" {
+		if key != "status" && key != "technique" && key != "guidance" && key != "unitGuidance" && key != "focus" {
 			t.Fatalf("hint leaked solution data: %s", key)
 		}
 	}

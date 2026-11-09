@@ -41,6 +41,7 @@ function setup(mobile = false) {
     source.slice(source.indexOf('function updateControls()'), source.indexOf('function render()')) +
     source.slice(source.indexOf('function puzzleString()'), source.indexOf('function renderTechniqueLink')) +
     source.slice(source.indexOf('async function requestHint()'), source.indexOf("$('hint').addEventListener")) + `
+    ${source.slice(source.indexOf("$('hint-page').addEventListener"), source.indexOf("$('dismiss-hint').addEventListener"))}
     function showIssues() {}
     function message() {}
     function scheduleValidation() {}
@@ -193,4 +194,23 @@ test('hint opens as a dialog and closes without scrolling', () => {
   run('activeHint = null; updateControls();');
   assert.equal(run(`$('hint-card').open`), false);
   assert.equal(run(`$('hint-card').lastScroll`), undefined);
+});
+
+test('hint has two short pages, with unit guidance on the second and resets on a new hint', async () => {
+  const run = setup(true);
+  run(`async function api() { return {status: 'hint', technique: 'Hidden Single',
+    guidance: 'Find a digit with one possible cell.', unitGuidance: 'Check column 4.'}; }`);
+  await run('requestHint();');
+  run('updateControls();');
+  assert.equal(run(`$('hint-position').textContent`), '1/2');
+  assert.equal(run(`$('hint-text').textContent`), 'Find a digit with one possible cell.');
+  run(`$('hint-page').listeners.click();`);
+  assert.equal(run(`$('hint-position').textContent`), '2/2');
+  assert.equal(run(`$('hint-text').textContent`), 'Check column 4.');
+  run(`$('hint-page').listeners.click();`);
+  assert.equal(run(`$('hint-position').textContent`), '1/2');
+  run(`$('hint-page').listeners.click();`);
+  await run('requestHint();');
+  run('updateControls();');
+  assert.equal(run(`$('hint-position').textContent`), '1/2');
 });

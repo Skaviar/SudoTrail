@@ -16,7 +16,7 @@
 body { margin: 0; }
 body:not(.puzzle-loaded) { min-height: 100svh; background-image: radial-gradient(ellipse at 90% 0%,#e8edde 0,transparent 55%); }
 button, input { font: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 select { font: inherit; }
 button:disabled { cursor: default; opacity: .4; }
 button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
@@ -73,9 +73,9 @@ h2 { margin: 0; }
 #import-photo { position: relative; }
 .beta-badge { position: absolute; top: -7px; right: 6px; padding: 1px 5px; border: 1px solid #638270; border-radius: 999px; background: var(--accent); color: #173b2d; font-size: 9px; font-weight: 500; line-height: 1.2; letter-spacing: .2px; }
 .custom-picker .primary { color: #173b2d; background: var(--accent); }
-.custom-picker .primary:hover { background: #dfeacc; }
+@media (hover: hover) and (pointer: fine) { .custom-picker .primary:hover { background: #dfeacc; } }
 .custom-picker .secondary { color: #f1f7e7; background: transparent; border-color: #638270; }
-.custom-picker .secondary:hover { background: #2a503d; }
+@media (hover: hover) and (pointer: fine) { .custom-picker .secondary:hover { background: #2a503d; } }
 .challenge-tip { color: #64766a; font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
 .practice-challenge :is(.step-legend,.navigation,#timeline) { display: none; }
 .practice-challenge .playback { grid-template-columns: auto auto auto; }
@@ -84,9 +84,9 @@ h2 { margin: 0; }
 /* One lightweight toolbar, with no stacked rows of controls. */
 .button { border: 1px solid transparent; border-radius: 7px; padding: 6px 10px; font-size: 12px; font-weight: 500; transition: background .15s,border-color .15s,box-shadow .15s; }
 .secondary { background: white; color: var(--ink); border-color: var(--line); }
-.secondary:hover { background: #f0f4eb; }
+@media (hover: hover) and (pointer: fine) { .secondary:hover { background: #f0f4eb; } }
 .primary { background: var(--green); color: white; }
-.primary:hover { background: #194635; }
+@media (hover: hover) and (pointer: fine) { .primary:hover { background: #194635; } }
 .quiet { background: none; color: var(--muted); }
 .board-toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; white-space: nowrap; margin-bottom: 8px; padding: 0 0 4px; scrollbar-width: thin; scrollbar-color: #bdcabb transparent; }
 .board-toolbar > * { flex: none; }
@@ -110,7 +110,7 @@ h2 { margin: 0; }
 .cell input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; text-align: center; font-size: clamp(20px,2.7vw,29px); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--green); outline: none; }
 .cell input[type="button"] { cursor: pointer; appearance: none; -webkit-appearance: none; }
 .cell.clue input { color: var(--ink); }
-.cell.selected { background: #edf3df; box-shadow: inset 0 0 0 2px #709658; z-index: 1; }
+.cell.selected { background: #fafafa; box-shadow: inset 0 0 0 2px #68716d; z-index: 1; }
 .cell.conflict { background: #fff0ed; box-shadow: inset 0 0 0 2px #d17a6b; }
 .cell.focus-unit { background: #f1f5e9; }
 .cell.source-cell { background: #deece9; box-shadow: inset 0 0 0 2px #6c9d91; }
@@ -155,7 +155,7 @@ h2 { margin: 0; }
 .technique { display: inline-block; font-size: 10px; font-weight: 500; color: #526a38; background: #edf2e3; padding: 4px 6px; border-radius: 4px; }
 .technique-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
 .technique-link { display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-size: 11px; font-weight: 500; text-underline-offset: 3px; }
-.technique-link:hover { color: #153c2d; }
+@media (hover: hover) and (pointer: fine) { .technique-link:hover { color: #153c2d; } }
 #focus-guide { margin-top: 6px; }
 #step-title { font-size: 17px; font-weight: 400; line-height: 1.5; margin-top: 8px; }
 #reasoning-details > summary { cursor: pointer; font-size: 11px; color: var(--green); padding-top: 10px; }
@@ -174,7 +174,7 @@ h2 { margin: 0; }
 .reviewing-steps .playback { display: grid; grid-template-columns: auto minmax(50px,220px) auto; justify-content: center; align-items: center; gap: 16px; position: fixed; inset: auto 0 0; z-index: 20; padding: 5px 16px calc(5px + env(safe-area-inset-bottom,0px)); background: #fff; border-top: 1px solid var(--line); }
 .navigation { display: flex; align-items: center; gap: 5px; }
 .nav-button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 44px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--ink); font-size: 20px; }
-.nav-button:hover:not(:disabled) { background: #edf2e7; }
+@media (hover: hover) and (pointer: fine) { .nav-button:hover:not(:disabled) { background: #edf2e7; } }
 #previous, #next { width: 44px; }
 #position { min-width: 47px; text-align: center; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 #timeline { width: 100%; min-width: 0; height: 24px; margin: 0; accent-color: var(--green); }
@@ -278,13 +278,14 @@ h2 { margin: 0; }
 .number-pad { display: grid; grid-template-columns: repeat(9,minmax(0,1fr)); gap: 6px; }
 .number-pad .button {
   padding: 0; min-height: 48px; font-size: 22px; font-weight: 700;
-  color: #fff; background: #343942; border-color: #252930;
-  box-shadow: 0 2px 0 #252930; touch-action: manipulation;
+  /* Keep the same color before selection, during taps and after entry. */
+  color: #505b55; background: #f5f6f3; border-color: #dce1d8;
+  box-shadow: 0 2px 0 #e3e6df; touch-action: manipulation;
 }
-.number-pad .button:hover:not(:disabled) { background: #252930; }
-.number-pad .button:active:not(:disabled) { background: #181b20; box-shadow: none; transform: translateY(2px); }
-.number-pad .button:focus-visible { outline: 3px solid #343942; outline-offset: 3px; }
-.number-pad .button:disabled { color: #60656e; background: #e8eaed; border-color: #bbc0c8; box-shadow: none; opacity: 1; }
+.number-pad .button:active:not(:disabled) { box-shadow: none; transform: translateY(2px); }
+.number-pad .button:focus-visible { outline: 2px solid #89928c; outline-offset: 3px; }
+.number-pad .button:disabled { opacity: 1; }
+.cell-actions .button:disabled { opacity: 1; }
 .cell-actions { display: flex; gap: 8px; margin-top: 8px; }
 .cell-actions .button { min-height: 44px; flex: 1; touch-action: manipulation; }
 @media(max-width:360px) {
@@ -294,19 +295,22 @@ h2 { margin: 0; }
 /* Repeated puzzle taps should act immediately without double-tap zoom. */
 .workspace, .photo-review-grid, button { touch-action: manipulation; }
 /* A top-layer dialog leaves the board's layout and scroll position alone. */
-.hint-card { position: fixed; inset: 12px 0 auto; width: min(520px,calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; margin: 0 auto; padding: 12px 16px; border: 1px solid #e4c96e; border-left: 4px solid #d6b74c; border-radius: 8px; background: #fff7d6; color: #493c12; box-shadow: 0 12px 40px #0003; }
-.hint-card::backdrop { background: #17201c55; }
-.hint-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.hint-heading .button { min-height: 36px; color: #66521b; flex: none; }
-.hint-card h3 { margin: 0; font-size: 14px; }
-.hint-card p { margin: 4px 0 0; font-size: 14px; line-height: 1.5; }
+.hint-card { position: fixed; inset: 12px 0 auto; width: min(340px,calc(100% - 32px)); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; margin: 0 auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fffefa; color: var(--ink); box-shadow: 0 8px 28px #0002; }
+.hint-card::backdrop { background: #17201c33; }
+.hint-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hint-heading .button { width: 44px; min-height: 44px; padding: 0; margin: -4px -8px -4px 0; font-size: 22px; flex: none; }
+.hint-card h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.hint-card p { margin: 2px 0 6px; font-size: 13px; line-height: 1.45; }
+.hint-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hint-footer span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint-footer .button { min-height: 44px; padding: 6px 12px; }
 @media(max-width:800px) {
   select { font-size: 16px; }
   .reviewing-steps #hint { display: none; }
 }
 
 .hint-button { background: #f5d76e; border-color: #d6b74c; color: #493c12; }
-.hint-button:hover { background: #edca50; }
+@media (hover: hover) and (pointer: fine) { .hint-button:hover { background: #edca50; } }
 
 /* Animate the hint independently of the puzzle layout. */
 .hint-card[open] { animation: hint-enter 220ms cubic-bezier(.2,.8,.2,1) both; }

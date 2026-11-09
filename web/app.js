@@ -36,6 +36,7 @@ let selectedCell = -1;
 let highlightedCell = -1;
 let editHistory = [];
 let activeHint = null;
+let hintPage = 1;
 const keypadLayout = window.matchMedia('(max-width: 800px), (pointer: coarse)');
 function canEditCell(index) {
   return index >= 0 && index < 81 && !busy && !solvePending && !states.length && !givenClues?.[index];
@@ -246,8 +247,11 @@ function updateControls() {
   $('hint').setAttribute('aria-expanded', String(!$('hint-card').hidden));
   $('dismiss-hint').disabled = busy;
   if (activeHint) {
-    $('hint-title').textContent = `Hint · ${activeHint.technique}`;
-    $('hint-text').textContent = activeHint.guidance;
+    $('hint-title').textContent = activeHint.technique;
+    $('hint-position').textContent = `${hintPage}/2`;
+    $('hint-text').textContent = hintPage === 1 ? activeHint.guidance : activeHint.unitGuidance;
+    $('hint-page').textContent = hintPage === 1 ? 'Next →' : '← Back';
+    $('hint-page').disabled = busy;
   }
   if (!$('hint-card').hidden && !$('hint-card').open) $('hint-card').showModal();
   else if ($('hint-card').hidden && $('hint-card').open) $('hint-card').close();
@@ -432,6 +436,7 @@ async function requestHint() {
   if (givenClues === null) { givenClues = [...original]; resetEdits(); }
   transcribing = false;
   activeHint = result;
+  hintPage = 1;
   if (activeHint.focus) {
     selectedCell = activeHint.focus.row * 9 + activeHint.focus.col;
     highlightedCell = selectedCell;
@@ -440,6 +445,11 @@ async function requestHint() {
 
 }
 $('hint').addEventListener('click', () => perform(requestHint));
+$('hint-page').addEventListener('click', () => {
+  if (!activeHint || busy) return;
+  hintPage = hintPage === 1 ? 2 : 1;
+  updateControls();
+});
 $('dismiss-hint').addEventListener('click', () => { activeHint = null; render(); });
 $('hint-card').addEventListener('close', () => {
   if (activeHint && !$('hint-card').open) { activeHint = null; render(); }
