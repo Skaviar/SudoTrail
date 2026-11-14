@@ -26,6 +26,10 @@ window.godokuSession = (() => {
       if (typeof saved.challengePending === 'boolean') practice.challengePending = reviewing && saved.challengePending;
       return {
         ...practice,
+        pencilMarks: Array.isArray(saved.pencilMarks) && saved.pencilMarks.length === 81 &&
+          saved.pencilMarks.every(mask => Number.isInteger(mask) && mask >= 0 && mask <= 1022 && !(mask & 1))
+          ? saved.pencilMarks.map((mask, index) => saved.original[index] ? 0 : mask) : Array(81).fill(0),
+        notesMode: saved.notesMode === true,
         original: saved.original, givenClues: saved.givenClues,
         transcribing: saved.transcribing && !reviewing,
         puzzleLabel: typeof saved.puzzleLabel === 'string' ? saved.puzzleLabel : '',

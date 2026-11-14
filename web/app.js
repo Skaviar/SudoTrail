@@ -6,6 +6,8 @@ const cells = [];
 const savedSession = window.godokuSession.load();
 const training = window.godokuTraining;
 let original = savedSession?.original || Array(81).fill(0);
+let pencilMarks = savedSession?.pencilMarks || Array(81).fill(0);
+let notesMode = savedSession?.notesMode === true;
 // Preserve puzzle provenance separately from the editable submission.
 // null means a custom puzzle is still being entered.
 let givenClues = savedSession?.givenClues || null;
@@ -50,10 +52,48 @@ function editCell(index, value) {
     if (document.activeElement === cells[index].input) cells[index].input.blur();
   }
   if (original[index] === value) { render(); return; }
-  editHistory.push({ index, value: original[index] });
+  editHistory.push({ index, value: original[index], notes: pencilMarks[index] });
+  pencilMarks[index] = 0;
   original[index] = value;
   activeHint = null;
   showIssues([]); message(''); render(); scheduleValidation();
+}
+// Pencil marks are personal notes, separate from solver candidates and values.
+function toggleNote(index, digit) {
+  if (!canEditCell(index) || original[index] || digit < 1 || digit > 9) return;
+  editHistory.push({ index, value: original[index], notes: pencilMarks[index] });
+  pencilMarks[index] ^= 1 << digit;
+  activeHint = null;
+  render();
+  if (selectedCell === index) cells[index].input.focus();
+}
+function enterDigit(index, digit) {
+  if (notesMode) toggleNote(index, digit);
+  else editCell(index, digit);
+}
+function clearCell(index) {
+  if (!canEditCell(index)) return;
+  if (original[index]) { editCell(index, 0); return; }
+  if (!pencilMarks[index]) return;
+  editHistory.push({ index, value: 0, notes: pencilMarks[index] });
+  pencilMarks[index] = 0;
+  activeHint = null;
+  render();
+  if (selectedCell === index) cells[index].input.focus();
+}
+function toggleNotesMode() {
+  if (busy || solvePending || states.length) return;
+  notesMode = !notesMode;
+  render();
+  if (selectedCell >= 0) cells[selectedCell].input.focus();
+}
+function resetNotes() { pencilMarks = Array(81).fill(0); notesMode = false; }
+function renderPencilMarks(marks, mask) {
+  for (let digit = 1; digit <= 9; digit++) {
+    const mark = document.createElement('span');
+    if (mask & (1 << digit)) mark.textContent = digit;
+    marks.append(mark);
+  }
 }
 function undoEdit() {
   if (busy || solvePending || states.length || !editHistory.length) return;
@@ -61,6 +101,7 @@ function undoEdit() {
   // A newly loaded puzzle never inherits edits from the previous one.
   if (givenClues?.[edit.index]) return;
   original[edit.index] = edit.value;
+  pencilMarks[edit.index] = edit.notes;
   activeHint = null;
   selectedCell = edit.index;
   highlightedCell = edit.index;
@@ -71,7 +112,7 @@ function resetEdits() { editHistory = []; selectedCell = -1; highlightedCell = -
 
 // Keep selection while using the cell controls; other taps end cell entry.
 document.addEventListener('pointerdown', event => {
-  if (event.target.closest?.('#board .cell, #number-pad button, #clear-cell, #undo')) return;
+  if (event.target.closest?.('#board .cell, #number-pad button, #clear-cell, #undo, #notes-mode')) return;
   if (selectedCell < 0 && highlightedCell < 0) return;
   selectedCell = -1;
   highlightedCell = -1;
@@ -92,13 +133,13 @@ function scheduleSessionSave() {
 }
 function saveSession(clearEmpty = false) {
   clearTimeout(saveTimer);
-  const hasPuzzle = original.some(Boolean) || givenClues !== null || states.length > 0;
+  const hasPuzzle = original.some(Boolean) || pencilMarks.some(Boolean) || givenClues !== null || states.length > 0;
   if (!hasPuzzle && !hasSavedPuzzle && clearEmpty !== true) {
     $('save-status').hidden = true;
     return;
   }
   const snapshot = hasPuzzle ? {
-    original, givenClues, transcribing, referencePhoto, puzzleLabel,
+    original, pencilMarks, notesMode, givenClues, transcribing, referencePhoto, puzzleLabel,
     selectedDifficulty, selectedTechnique, practiceFocus, challengePending, lastPuzzleID,
     reviewing: states.length > 0 || restoringStep !== null,
     current: restoringStep ?? current,
@@ -134,6 +175,13 @@ for (let index = 0; index < 81; index++) {
       return;
     }
     if (event.isComposing) return;
+    if (notesMode) {
+      const digit = Number((event.data ?? input.value).replace(/[^1-9]/g, '').at(-1));
+      if (event.inputType?.startsWith('delete')) clearCell(index);
+      else if (digit) toggleNote(index, digit);
+      input.value = original[index] || '';
+      return;
+    }
     const enteredDigit = /[1-9]/.test(event.data ?? input.value);
     const wasFocused = document.activeElement === input;
     const insertedText = event.inputType?.startsWith('insert') || event.data != null;
@@ -147,8 +195,24 @@ for (let index = 0; index < 81; index++) {
     if (transcribing && digits && enteredDigit && wasFocused) focusNextEmptyCell(index);
   });
   input.addEventListener('keydown', event => {
+    if (event.isComposing) return;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey) {
       event.preventDefault(); undoEdit(); return;
+    }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'n') {
+      event.preventDefault(); toggleNotesMode(); return;
+    }
+    if (notesMode && canEditCell(index) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (/^[1-9]$/.test(event.key)) {
+        event.preventDefault(); toggleNote(index, Number(event.key)); return;
+      }
+      if (['Backspace', 'Delete', '0'].includes(event.key)) {
+        event.preventDefault(); clearCell(index); return;
+      }
+    }
+    if (canEditCell(index) && !original[index] && pencilMarks[index] &&
+        !event.ctrlKey && !event.metaKey && !event.altKey && ['Backspace', 'Delete', '0'].includes(event.key)) {
+      event.preventDefault(); clearCell(index); return;
     }
     // Read-only mobile inputs suppress the OS keyboard; physical keys still work.
     if (keypadLayout.matches && canEditCell(index) && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -262,13 +326,20 @@ function updateControls() {
   cells.forEach(({ input }, index) => {
     input.type = keypadLayout.matches ? 'button' : 'text';
     input.readOnly = !canEditCell(index) || keypadLayout.matches;
+    const notes = !original[index] && !states.length ? Array.from({length: 9}, (_, i) => i + 1).filter(digit => pencilMarks[index] & (1 << digit)) : [];
+    input.setAttribute('aria-label', `Row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}${notes.length ? ', notes: ' + notes.join(', ') : ''}`);
     input.inputMode = keypadLayout.matches ? 'none' : 'numeric';
     input.setAttribute('aria-readonly', String(!canEditCell(index)));
   });
   $('cell-controls').hidden = !entryMode || states.length > 0;
-  $('number-pad').hidden = !keypadLayout.matches;
-  for (const button of $('number-pad').querySelectorAll('button')) button.disabled = !canEditCell(selectedCell);
-  $('clear-cell').disabled = !canEditCell(selectedCell) || !original[selectedCell];
+  $('number-pad').hidden = false;
+  $('notes-mode').setAttribute('aria-pressed', String(notesMode));
+  $('board-entry-tools').hidden = !entryMode || states.length > 0;
+  $('notes-mode').setAttribute('aria-label', notesMode ? 'Pencil marks on' : 'Pencil marks off');
+  $('notes-mode').title = notesMode ? 'Turn pencil marks off (N)' : 'Turn pencil marks on (N)';
+  $('notes-mode').disabled = busy || solvePending || states.length > 0;
+  for (const button of $('number-pad').querySelectorAll('button')) button.disabled = !canEditCell(selectedCell) || (notesMode && !!original[selectedCell]);
+  $('clear-cell').disabled = !canEditCell(selectedCell) || (!original[selectedCell] && !pencilMarks[selectedCell]);
   $('undo').disabled = busy || solvePending || states.length > 0 || !editHistory.length;
   board.setAttribute('aria-busy', String(busy));
 }
@@ -301,6 +372,7 @@ function render() {
     const placed = step?.number > 0 && step.row === row && step.col === col;
     cell.className = ['cell', index === highlightedCell ? 'selected' : '', value && (givenClues ? givenClues[index] === value : original[index] === value) ? 'clue' : '', conflicts.has(index) ? 'conflict' : '', placed ? 'placed' : ''].filter(Boolean).join(' ');
     marks.replaceChildren();
+    if (!state && !value) renderPencilMarks(marks, pencilMarks[index]);
     if (state && !value && $('candidates').checked) {
       for (let digit = 1; digit <= 9; digit++) {
         const mark = document.createElement('span');
@@ -317,11 +389,13 @@ function render() {
   $('edit').hidden = !state;
   $('board-title').textContent = state ? 'Solution steps' : puzzleLabel || 'Enter a puzzle';
   $('board-hint').hidden = !!state;
-  $('board-hint').textContent = keypadLayout.matches
+  $('board-hint').textContent = notesMode
+    ? 'Notes on: select an empty cell, then tap or type 1–9 to add or remove pencil marks.'
+    : keypadLayout.matches
     ? givenClues === null ? 'Select a cell, then tap a number to enter your puzzle.'
       : 'Select a cell, then tap a number. Original clues are locked.'
     : transcribing ? 'Type 1–9 for clues; 0, space or another character skips a blank.'
-    : 'Fill the empty cells. Original clues are locked.';
+    : 'Fill the empty cells. Press N to toggle pencil marks. Original clues are locked.';
   $('step-count').textContent = state ? `${states.length - 1} steps` : '';
   if (state && practiceFocus) $('step-count').textContent = `${practiceFocus} practice`;
   $('position').textContent = state ? `${current} / ${states.length - 1}` : '— / —';
@@ -474,6 +548,7 @@ $('random').addEventListener('click', () => perform(async () => {
   const query = new URLSearchParams({ source: 'practice', difficulty: selectedDifficulty, technique: selectedTechnique, exclude: lastPuzzleID });
   const result = await api(`/api/puzzles/random?${query}`);
   resetEdits();
+  resetNotes();
   original = [...result.puzzle].map(ch => /[1-9]/.test(ch) ? Number(ch) : 0);
   givenClues = [...original];
   transcribing = false; referencePhoto = ''; $('reference-image').removeAttribute('src');
@@ -491,6 +566,7 @@ $('random').addEventListener('click', () => perform(async () => {
 $('clear').addEventListener('click', () => {
   cancelValidation();
   resetEdits();
+  resetNotes();
   original = Array(81).fill(0); givenClues = null; states = []; current = 0; puzzleLabel = ''; showIssues([]);
   entryMode = false; practiceFocus = ''; challengePending = false; practiceTarget = -1;
   transcribing = true; referencePhoto = ''; $('reference-image').removeAttribute('src');
@@ -509,13 +585,14 @@ $('timeline').addEventListener('input', event => navigate(Number(event.target.va
 $('candidates').addEventListener('change', render);
 $('visuals').addEventListener('change', render);
 $('proof-branch').addEventListener('change', event => { selectedProof = Number(event.target.value); render(); });
-$('clear-cell').addEventListener('click', () => editCell(selectedCell, 0));
+$('notes-mode').addEventListener('click', toggleNotesMode);
+$('clear-cell').addEventListener('click', () => clearCell(selectedCell));
 $('undo').addEventListener('click', undoEdit);
 for (const button of $('number-pad').querySelectorAll('button')) {
   button.addEventListener('click', () => {
     const index = selectedCell;
-    editCell(index, Number(button.dataset.digit));
-    if (transcribing && canEditCell(index)) focusNextEmptyCell(index);
+    enterDigit(index, Number(button.dataset.digit));
+    if (!notesMode && transcribing && canEditCell(index)) focusNextEmptyCell(index);
   });
 }
 keypadLayout.addEventListener('change', render);
@@ -759,6 +836,7 @@ function renderVisuals(state, step) {
 document.addEventListener('godoku:photo-import', event => {
   if (busy) return;
   resetEdits();
+  resetNotes();
   original = [...event.detail.values];
   givenClues = [...original];
   transcribing = false; referencePhoto = event.detail.image || '';

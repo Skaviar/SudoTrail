@@ -7,6 +7,7 @@ const source = readFileSync(new URL('./session.js', import.meta.url), 'utf8');
 const key = 'godoku.session.v1';
 const snapshot = () => ({
   original: [5, 3, 4, ...Array(78).fill(0)],
+  pencilMarks: Array(81).fill(0), notesMode: false,
   givenClues: [5, 3, ...Array(79).fill(0)],
   transcribing: false, referencePhoto: '', puzzleLabel: 'Puzzle #42',
   reviewing: true, current: 7, candidates: false, guides: true
@@ -90,4 +91,27 @@ test('technique challenges resume without revealing the pending hint', () => {
   assert.equal(returned.selectedDifficulty, undefined);
   assert.equal(returned.practiceFocus, undefined);
   assert.equal(returned.challengePending, false);
+});
+
+test('personal pencil marks and notes mode survive reload independently of solver candidates', () => {
+  const page = browser();
+  const saved = { ...snapshot(), pencilMarks: Array(81).fill(0), notesMode: true };
+  saved.pencilMarks[5] = (1 << 2) | (1 << 9);
+  page.session.save(saved);
+  const loaded = browser(page.storage).session.load();
+  assert.deepEqual([...loaded.pencilMarks], saved.pencilMarks);
+  assert.equal(loaded.notesMode, true);
+});
+
+test('old saves and malformed notes load safely without losing the puzzle', () => {
+  for (const pencilMarks of [undefined, [4], Array(81).fill(-1), Array(81).fill(1), Array(81).fill(1024), Array(81).fill('4')]) {
+    const stored = {version: 1, ...snapshot(), pencilMarks};
+    const loaded = browser(new Map([[key, JSON.stringify(stored)]])).session.load();
+    assert.equal(loaded.original[0], 5);
+    assert.deepEqual([...loaded.pencilMarks], Array(81).fill(0));
+  }
+  const stored = {version: 1, ...snapshot(), pencilMarks: Array(81).fill(4)};
+  const loaded = browser(new Map([[key, JSON.stringify(stored)]])).session.load();
+  assert.equal(loaded.pencilMarks[0], 0, 'filled cells never retain notes');
+  assert.equal(loaded.pencilMarks[5], 4);
 });

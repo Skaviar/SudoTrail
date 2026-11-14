@@ -28,6 +28,9 @@ function setup(mobile = false) {
     addEventListener(name, callback) { this.listeners[name] = callback; },
     querySelectorAll() { return []; }
   };
+  document.getElementById('number-pad').children = Array.from({length: 9}, (_, index) => {
+    const button = element(); button.dataset.digit = index + 1; return button;
+  });
   const context = vm.createContext({
     document, animationFrames: [],
     requestAnimationFrame: callback => context.animationFrames.push(callback),
@@ -41,6 +44,7 @@ function setup(mobile = false) {
     source.slice(source.indexOf('function updateControls()'), source.indexOf('function render()')) +
     source.slice(source.indexOf('function puzzleString()'), source.indexOf('function renderTechniqueLink')) +
     source.slice(source.indexOf('async function requestHint()'), source.indexOf("$('hint').addEventListener")) + `
+    ${source.slice(source.indexOf("$('notes-mode').addEventListener"), source.indexOf("keypadLayout.addEventListener"))}
     ${source.slice(source.indexOf("$('hint-page').addEventListener"), source.indexOf("$('dismiss-hint').addEventListener"))}
     function showIssues() {}
     function message() {}
@@ -213,4 +217,53 @@ test('hint has two short pages, with unit guidance on the second and resets on a
   await run('requestHint();');
   run('updateControls();');
   assert.equal(run(`$('hint-position').textContent`), '1/2');
+});
+
+for (const mobile of [false, true]) {
+  test(`pencil marks toggle with keyboard and keypad, preserve selection and support undo (${mobile ? 'mobile' : 'desktop'})`, () => {
+    const run = setup(mobile);
+    run(`givenClues = Array(81).fill(0); givenClues[0] = 5; original = [...givenClues];
+      cells[1].input.focus(); $('notes-mode').listeners.click();`);
+    assert.equal(run('notesMode'), true);
+    run(`cells[1].input.listeners.keydown({key: '2', preventDefault() {}});`);
+    run(`$('number-pad').children[8].listeners.click();`);
+    assert.equal(run('pencilMarks[1]'), (1 << 2) | (1 << 9));
+    assert.equal(run('original[1]'), 0);
+    assert.equal(run('selectedCell'), 1);
+    run(`$('number-pad').children[1].listeners.click();`);
+    assert.equal(run('pencilMarks[1]'), 1 << 9);
+    run('undoEdit();');
+    assert.equal(run('pencilMarks[1]'), (1 << 2) | (1 << 9));
+    run(`$('clear-cell').listeners.click();`);
+    assert.equal(run('pencilMarks[1]'), 0);
+    run(`undoEdit(); $('notes-mode').listeners.click(); $('number-pad').children[3].listeners.click();`);
+    assert.equal(run('original[1]'), 4);
+    assert.equal(run('pencilMarks[1]'), 0);
+    run('undoEdit();');
+    assert.equal(run('original[1]'), 0);
+    assert.equal(run('pencilMarks[1]'), (1 << 2) | (1 << 9));
+    run(`cells[1].input.listeners.keydown({key: 'n', preventDefault() {}});`);
+    assert.equal(run('notesMode'), true);
+  });
+}
+
+test('notes cannot change clues, filled cells or solver playback, and reset for a new puzzle', () => {
+  const run = setup();
+  run(`givenClues = Array(81).fill(0); givenClues[0] = 5; original = [...givenClues]; original[1] = 4;
+    toggleNote(0, 2); toggleNote(1, 2);`);
+  assert.equal(run('pencilMarks.some(Boolean)'), false);
+  run('states = [{}]; toggleNote(2, 3); states = []; busy = true; toggleNote(2, 3); busy = false;');
+  assert.equal(run('pencilMarks.some(Boolean)'), false);
+  run('toggleNote(2, 3); notesMode = true; resetNotes();');
+  assert.equal(run('pencilMarks.some(Boolean)'), false);
+  assert.equal(run('notesMode'), false);
+});
+
+test('pencil marks render in their 3 by 3 positions', () => {
+  const run = setup();
+  run('const marks = document.createElement("div"); renderPencilMarks(marks, (1 << 2) | (1 << 9));');
+  assert.equal(run('marks.children.length'), 9);
+  assert.equal(run('marks.children[1].textContent'), 2);
+  assert.equal(run('marks.children[8].textContent'), 9);
+  assert.equal(run('marks.children[0].textContent'), undefined);
 });
